@@ -1,0 +1,331 @@
+# Fantasy RPG Web Game – Game Design & Technical Specification (Expanded)
+
+## 1. Title & Overview
+
+**Working Title:** *Grassland Awakening*
+**Genre:** Fantasy RPG (Web-based)
+**Engine:** Custom Laravel + JS
+**Art Style:** Pixel Art (2D)
+**Target Platform:** Browser (Responsive for Mobile)
+
+Suggested potential placeholder/final names such as:
+*Grassland Awakening (keep current working title)
+*Paths of the Forgotten
+*Caravan Roads
+*Echoes of the Plains
+*Four Roads to Dawn
+---
+
+## 2. Lore & Premise
+
+The player awakens in an empty grassland with a lone log house and four roads leading to the cardinal directions. Each adventure generates unique branching paths with combat, treasures, NPCs, and events. NPCs migrate to the log house over time, creating a growing village.
+
+---
+
+## 3. Core Gameplay Loop
+
+1. Start at the log house.
+2. Choose one of four roads.
+3. Enter a procedurally generated node map (FTL/Slay the Spire style).
+4. Progress node-by-node:
+
+   * Combat encounters
+   * Treasure and crafting materials
+   * NPC and story events
+5. Defeat the Boss node at Level 10.
+6. Earn persistent currency and loot.
+7. Return to the log house; NPCs may migrate.
+8. Roads are regenerated for the next adventure.
+
+---
+
+## 4. Adventure System
+
+* **Structure:**
+
+  * 10 levels per adventure.
+  * Level 1: 1 node (start).
+  * Level 2: 3 nodes (lanes).
+  * Levels 3–9: 2–3 nodes with intersections.
+  * Level 10: Boss node.
+* **Movement Rules:**
+
+  * Player moves forward only.
+  * Lane changes only at intersections.
+  * No dead ends.
+* **Difficulty:**
+
+  * Easy, Normal, Hard, Nightmare. Adjusts enemy stats and skill check rolls.
+* **Seed System:**
+
+  * Adventures are generated from a deterministic seed.
+  * The seed controls the layout and node types.
+  * Players can optionally enter custom seeds for adventures.
+  * To avoid excessive DB entries, the seed itself is hashed and used to generate the map layout on the fly.
+  * The database only stores **player progress** (completed nodes, loot, state) instead of every node structure.
+
+### Example Node Map Structure
+
+```
+Level 1:          ●
+                     /  │  \
+Level 2:    ●   ●   ●
+                   ╲  /    ╱
+Level 3:      ●   ●  
+                     ╲ /  ╲ 
+Level 4:        ●    ●
+                     /  \     \
+Level 5:     ●    ●  ●
+                    ╲   │  ╱
+Level 6:           ●
+                     /   |  \
+Level 7:     ●    ●  ●
+                   |    │  ╱ |
+Level 8:     ●    ●   ●
+                     \  /  \  /
+Level 9:        ●   ●
+                       \  / 
+Level 10:       👑
+```
+
+---
+
+## 5. Combat System (D\&D 2024 Inspired)
+
+* **Turn-based JRPG style.**
+* Stats: HP, AC, STR, DEX, CON, INT, WIS, CHA.
+* Player stats via **point allocation** on level-up.
+* Enemy archetypes: Melee, Ranged, Casters, Healers/Clerics, Debuffers, Summoners.
+* Scaling: Based on player level and difficulty mode.
+
+---
+
+## 6. NPC & Village Mechanics
+
+* NPCs have personalities, schedules, relationships.
+* NPCs migrate to the village; bad relationships can create antagonists.
+* Village evolution:
+
+  * 0–3 NPCs: Log house
+  * 4–8 NPCs: Hamlet
+  * 9+ NPCs: Village with services
+
+---
+
+## 7. Persistent Currency & Progression
+
+* **Currency Gains:** Combat +10, Elite +30, Boss +100.
+* **Uses:** Permanent upgrades, gear purchases, later multiplayer trading.
+* **XP & Leveling:**
+
+  * XP gained per combat/event.
+  * XP thresholds tuned for web pacing (shorter sessions, gradual growth).
+  * Level-up grants stat points for allocation.
+
+---
+
+## 8. Items & Crafting
+
+* **Categories:** Weapons, Armor, Consumables, Crafting Materials.
+* **Crafting Recipes:** Dropped as loot or bought at caravans; recipes are non-tradable, crafted items are tradable.
+* **Rarity:** Common → Uncommon → Rare → Epic → Legendary.
+
+---
+
+## 9. Skill Checks & Events
+
+* **Mechanic:** D\&D-style rolls modified by player stats.
+* **Difficulty Modes:** Adjust DC (Difficulty Class) for rolls.
+* **Alternative:** % based success chance per skill; can be toggled/tested in balancing.
+* **Outcomes:** Loot, NPC relationship changes, buffs/debuffs.
+
+---
+
+## 10. Save System
+
+* Saves on every node completion.
+* Saves on every village action (buy/sell, allocate stats, NPC reputation).
+* Unfinished adventures are persistent:
+
+  * On login, player can resume or abandon an adventure.
+* Only progress is stored; map layout is regenerated using the adventure seed.
+
+---
+
+## 11. Technical Architecture
+
+### Frontend
+
+* HTML5/CSS/JS (Canvas or SVG for node maps).
+* Pixel-art UI placeholders.
+* Frontend using Blade
+* Bootstrap 
+* No Tailwind
+* Use admin package https://github.com/nasirkhan/laravel-starter?tab=readme-ov-file (composer create-project nasirkhan/laravel-starter) change .env db to mysql from sqlite.
+
+### Backend
+
+* Laravel API for all game logic.
+* Service class for deterministic adventure generation.
+* JSON state sync.
+* MariaDB
+
+### Database Schema
+
+* **players:** id, name, persistent\_currency, stats.
+* **adventures:** id, player\_id, road, seed, created\_at.
+* **adventure\_progress:** id, adventure\_id, node\_id, state, loot\_collected.
+* **combat\_logs:** id, player\_id, adventure\_node\_id, outcome, currency\_earned.
+* **npcs:** id, name, personality, relationship\_score, village\_id.
+* **crafting\_recipes:** id, name, inputs, outputs, source (drop/caravan).
+
+---
+
+## 12. Laravel Migrations & Service Class
+
+* Updated to use seed-based generation and separate progress tracking.
+
+---
+
+## 13. Testing Tools
+
+* **Seed Debugging:** Ability to regenerate adventures by seed for QA.
+* **Laravel Artisan Commands:**
+
+  * `game:reset-player {id}`
+  * `game:generate-adventure {player}`
+  * `game:simulate-combat {player} {node}`
+  * `game:load-seed {seed}` for custom player-entered seeds.
+* **Adventure Viewer:** Admin view to see node maps and connections generated from a seed.
+
+---
+
+---
+
+## 14. Enhanced Features & Systems
+
+### Weather & Seasonal System
+
+* **Dynamic Weather:**
+  * Rain: Reduces fire damage by 25%, increases electric damage by 15%
+  * Snow: Reduces movement speed, increases ice damage effectiveness
+  * Fog: Reduces accuracy for ranged attacks, increases stealth success
+  * Clear: No modifiers, baseline combat
+* **Seasonal Events:**
+  * Spring: NPC migration events, bonus crafting materials
+  * Summer: Increased combat encounters, heat exhaustion mechanics
+  * Fall: Harvest festivals, trading bonuses
+  * Winter: Survival challenges, reduced NPC activity
+* **Implementation:** Weather cycles every 3-7 real days, seasons every 2-4 weeks
+
+### Road Specialization
+
+* **North Road (Ice/Winter Theme):**
+  * Enemies: Ice elementals, winter wolves, frost giants
+  * Focus: Defensive encounters, endurance challenges
+  * Materials: Ice crystals, fur, cold-resistant metals
+* **South Road (Desert/Fire Theme):**
+  * Enemies: Fire elementals, desert raiders, sand worms
+  * Focus: Aggressive encounters, heat survival
+  * Materials: Fire gems, rare minerals, heat-resistant materials
+* **East Road (Forest/Nature Theme):**
+  * Enemies: Treants, forest spirits, wild beasts
+  * Focus: Magic-heavy encounters, nature puzzles
+  * Materials: Rare herbs, magical wood, nature essence
+* **West Road (Mountain/Earth Theme):**
+  * Enemies: Stone golems, mountain trolls, earth elementals
+  * Focus: Crafting material rewards, mining encounters
+  * Materials: Precious metals, gems, rare ores
+
+### Adventure Modifiers
+
+* **Cursed Road:** +50% enemy stats, +100% loot quality, -25% healing effectiveness
+* **Merchant Caravan:** Extra trading nodes, rare item availability, caravan protection quests
+* **Bandit Activity:** +75% combat encounters, -50% peaceful events, bandit leader boss
+* **Blessed Path:** +25% healing effectiveness, divine intervention events, holy rewards
+* **Ancient Magic:** Wild magic zones, spell enhancement/corruption, magical anomalies
+
+### Enhanced NPC System
+
+* **NPC Skill Trees:**
+  * Blacksmith: Basic Repair → Advanced Crafting → Master Enchanter
+  * Healer: First Aid → Advanced Medicine → Divine Healing
+  * Trader: Local Goods → Regional Network → International Commerce
+  * Scholar: Basic Knowledge → Spell Research → Ancient Wisdom
+* **Village Specialization Paths:**
+  * Military Outpost: Combat training, weapon shops, guard patrols
+  * Trading Hub: Better prices, rare merchants, trade routes
+  * Magical Academy: Spell research, magical items, arcane library
+
+### Reputation & Faction System
+
+* **Faction Types:**
+  * Merchants Guild: Trading bonuses, rare items, commercial quests
+  * Warrior's Brotherhood: Combat training, weapon upgrades, honor system
+  * Mage Circle: Magical knowledge, spell components, arcane research
+  * Common Folk: Village development, local quests, community events
+* **Reputation Effects:**
+  * High reputation: Discounts, exclusive content, special NPCs
+  * Low reputation: Higher prices, hostile encounters, limited access
+  * Faction conflicts: Choosing sides affects other faction standings
+
+### Achievement System
+
+* **Combat Achievements:**
+  * "Giant Slayer": Defeat 100 large enemies
+  * "Spell Sword": Win 50 combats using both magic and melee
+  * "Untouchable": Complete adventure without taking damage
+* **Exploration Achievements:**
+  * "Road Master": Complete adventures on all four roads
+  * "Weather Walker": Adventure in all weather conditions
+  * "Seed Hunter": Complete 10 custom seed adventures
+* **Social Achievements:**
+  * "Village Builder": Reach village status with 15+ NPCs
+  * "Diplomat": Achieve max reputation with all factions
+  * "Mentor": Train 5 NPCs to master level
+
+### Daily/Weekly Challenges
+
+* **Daily Adventures:** Special seeds with unique modifiers and rewards
+* **Weekly Boss Rush:** Face multiple bosses in sequence for rare loot
+* **Community Goals:** Server-wide objectives with collective rewards
+* **Leaderboards:** Fastest completion times, highest scores, longest streaks
+
+### Accessibility Features
+
+* **Visual Accessibility:**
+  * Colorblind-friendly UI with pattern/shape indicators
+  * High contrast mode for better readability
+  * Text scaling options (75% to 150%)
+* **Gameplay Accessibility:**
+  * Simplified combat mode with automated optimal choices
+  * Turn timer extensions for players who need more time
+  * Audio cues for important events
+* **Mobile Optimizations:**
+  * Touch-friendly interface elements
+  * Responsive grid layouts
+  * Gesture-based navigation
+
+---
+
+## 15. Enhanced Database Schema
+
+* **weather_events:** id, type, start_date, end_date, effects_json
+* **road_specializations:** id, direction, theme, enemy_types, materials
+* **adventure_modifiers:** id, adventure_id, modifier_type, effects_json
+* **npc_skills:** id, npc_id, skill_tree, level, abilities_json
+* **village_specializations:** id, village_id, specialization_type, level, bonuses_json
+* **faction_reputations:** id, player_id, faction_type, reputation_score
+* **achievements:** id, player_id, achievement_type, unlocked_at, progress_json
+* **daily_challenges:** id, challenge_type, seed, start_date, rewards_json
+* **leaderboards:** id, player_id, challenge_id, score, completion_time
+
+---
+
+Database development env settings:
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=grassland_awakening
+DB_USERNAME=root
+DB_PASSWORD=m.15.m.04.m
+
