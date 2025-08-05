@@ -443,6 +443,9 @@ class Player extends Model
             'max_durability' => 100
         ]);
 
+        // Trigger equipment achievements
+        $this->triggerEquipmentAchievements();
+
         return true;
     }
 
@@ -621,6 +624,9 @@ class Player extends Model
         } else {
             $inventoryItem->delete();
         }
+
+        // Trigger equipment achievements
+        $this->triggerEquipmentAchievements();
 
         return true;
     }
@@ -873,6 +879,20 @@ class Player extends Model
         }
         
         return $query->get();
+    }
+
+    private function triggerEquipmentAchievements(): void
+    {
+        $achievementService = app(\App\Services\AchievementService::class);
+        
+        // Trigger item equipped achievement
+        $achievementService->processGameEvent($this, 'item_equipped');
+
+        // Check for equipment slot completion achievements
+        $achievementService->processGameEvent($this, 'equipment_slot_filled');
+        
+        // Check for equipment rarity achievements
+        $achievementService->processGameEvent($this, 'equipment_upgrade');
     }
 
 }

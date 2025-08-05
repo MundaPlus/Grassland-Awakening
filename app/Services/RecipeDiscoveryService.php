@@ -55,6 +55,10 @@ class RecipeDiscoveryService
                     ]);
                     
                     $discoveredRecipes[] = $recipe;
+
+                    // Trigger recipe discovery achievement
+                    $achievementService = app(\App\Services\AchievementService::class);
+                    $achievementService->processGameEvent($player, 'recipe_discovered');
                 }
             }
         }

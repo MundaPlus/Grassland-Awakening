@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Log;
 class CombatService
 {
     private WeatherService $weatherService;
+    private AchievementService $achievementService;
 
-    public function __construct(WeatherService $weatherService)
+    public function __construct(WeatherService $weatherService, AchievementService $achievementService)
     {
         $this->weatherService = $weatherService;
+        $this->achievementService = $achievementService;
     }
 
     public function initiateCombat(Player $player, array $enemyData, $adventure = null): array
@@ -104,6 +106,11 @@ class CombatService
         if (isset($result['damage']) && $result['damage'] > 0) {
             $combatData['enemy']['current_hp'] -= $result['damage'];
             $combatData['enemy']['current_hp'] = max(0, $combatData['enemy']['current_hp']);
+        }
+
+        // Track critical hits for achievements (player only)
+        if (isset($result['critical_hit']) && $result['critical_hit'] === true) {
+            $combatData['player_critical_hits'] = ($combatData['player_critical_hits'] ?? 0) + 1;
         }
 
         // Check for combat end
@@ -285,7 +292,8 @@ class CombatService
                 'success' => true,
                 'critical' => true,
                 'damage' => $damage,
-                'message' => "{$attacker['name']} scores a critical hit! Deals {$damage} damage!"
+                'message' => "{$attacker['name']} scores a critical hit! Deals {$damage} damage!",
+                'critical_hit' => true // Flag for achievement tracking
             ];
         } elseif ($attackRoll === 1) {
             // Critical miss
@@ -518,12 +526,48 @@ class CombatService
             $player->persistent_currency += $currencyGained;
             
             // Check for level up
+            $oldLevel = $player->level;
             if ($player->canLevelUp()) {
                 $player->levelUp();
+                // Trigger level up achievement
+                if ($player->level > $oldLevel) {
+                    $this->achievementService->processGameEvent($player, 'level_gained');
+                }
             }
+
+            // Process combat victory achievements
+            $this->processCombatAchievements($player, $combatData);
         }
         
         $player->save();
+    }
+
+    private function processCombatAchievements(Player $player, array $combatData): void
+    {
+        // Combat victory achievement
+        $this->achievementService->processGameEvent($player, 'combat_victory');
+
+        // Critical hit achievements
+        if (isset($combatData['player_critical_hits']) && $combatData['player_critical_hits'] > 0) {
+            for ($i = 0; $i < $combatData['player_critical_hits']; $i++) {
+                $this->achievementService->processGameEvent($player, 'critical_hit');
+            }
+        }
+
+        // Close call victory (won with 1 HP remaining)
+        if ($combatData['player']['current_hp'] === 1) {
+            $this->achievementService->processGameEvent($player, 'close_call_victory');
+        }
+
+        // Boss defeat achievement (check if enemy was a boss)
+        $enemy = $combatData['enemy'] ?? [];
+        if (isset($enemy['type']) && (
+            str_contains(strtolower($enemy['type']), 'boss') || 
+            str_contains(strtolower($enemy['name'] ?? ''), 'boss') ||
+            ($enemy['level'] ?? 1) >= $player->level + 3 // Significantly higher level enemy
+        )) {
+            $this->achievementService->processGameEvent($player, 'boss_defeated');
+        }
     }
 
     public function generateRandomEnemy(int $playerLevel): array

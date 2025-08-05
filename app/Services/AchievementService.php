@@ -20,6 +20,24 @@ class AchievementService
             'requirements' => ['combat_victories' => 1],
             'hidden' => false
         ],
+        'combat_novice' => [
+            'name' => 'Combat Novice',
+            'description' => 'Win 10 combat encounters',
+            'category' => 'combat',
+            'points' => 25,
+            'icon' => '🗡️',
+            'requirements' => ['combat_victories' => 10],
+            'hidden' => false
+        ],
+        'seasoned_fighter' => [
+            'name' => 'Seasoned Fighter',
+            'description' => 'Win 25 combat encounters',
+            'category' => 'combat',
+            'points' => 50,
+            'icon' => '⚔️',
+            'requirements' => ['combat_victories' => 25],
+            'hidden' => false
+        ],
         'veteran_warrior' => [
             'name' => 'Veteran Warrior',
             'description' => 'Win 50 combat encounters',
@@ -27,6 +45,42 @@ class AchievementService
             'points' => 100,
             'icon' => '🛡️',
             'requirements' => ['combat_victories' => 50],
+            'hidden' => false
+        ],
+        'combat_master' => [
+            'name' => 'Combat Master',
+            'description' => 'Win 100 combat encounters',
+            'category' => 'combat',
+            'points' => 200,
+            'icon' => '👑',
+            'requirements' => ['combat_victories' => 100],
+            'hidden' => false
+        ],
+        'legendary_warrior' => [
+            'name' => 'Legendary Warrior',
+            'description' => 'Win 250 combat encounters',
+            'category' => 'combat',
+            'points' => 400,
+            'icon' => '⚡',
+            'requirements' => ['combat_victories' => 250],
+            'hidden' => false
+        ],
+        'combat_god' => [
+            'name' => 'God of War',
+            'description' => 'Win 500 combat encounters',
+            'category' => 'combat',
+            'points' => 750,
+            'icon' => '🌟',
+            'requirements' => ['combat_victories' => 500],
+            'hidden' => false
+        ],
+        'first_critical' => [
+            'name' => 'Lucky Strike',
+            'description' => 'Score your first critical hit',
+            'category' => 'combat',
+            'points' => 15,
+            'icon' => '✨',
+            'requirements' => ['critical_hits' => 1],
             'hidden' => false
         ],
         'critical_master' => [
@@ -38,6 +92,15 @@ class AchievementService
             'requirements' => ['critical_hits' => 25],
             'hidden' => false
         ],
+        'critical_legend' => [
+            'name' => 'Critical Legend',
+            'description' => 'Score 100 critical hits in combat',
+            'category' => 'combat',
+            'points' => 150,
+            'icon' => '💫',
+            'requirements' => ['critical_hits' => 100],
+            'hidden' => false
+        ],
         'survivor' => [
             'name' => 'Survivor',
             'description' => 'Win a combat with only 1 HP remaining',
@@ -47,8 +110,26 @@ class AchievementService
             'requirements' => ['close_call_victories' => 1],
             'hidden' => false
         ],
+        'boss_slayer' => [
+            'name' => 'Boss Slayer',
+            'description' => 'Defeat your first boss',
+            'category' => 'combat',
+            'points' => 100,
+            'icon' => '👹',
+            'requirements' => ['bosses_defeated' => 1],
+            'hidden' => false
+        ],
+        'boss_hunter' => [
+            'name' => 'Boss Hunter',
+            'description' => 'Defeat 10 bosses',
+            'category' => 'combat',
+            'points' => 300,
+            'icon' => '🏆',
+            'requirements' => ['bosses_defeated' => 10],
+            'hidden' => false
+        ],
 
-        // Exploration Achievements
+        // Adventure & Exploration Achievements
         'first_steps' => [
             'name' => 'First Steps',
             'description' => 'Complete your first adventure',
@@ -58,13 +139,67 @@ class AchievementService
             'requirements' => ['adventures_completed' => 1],
             'hidden' => false
         ],
+        'adventuring_novice' => [
+            'name' => 'Adventuring Novice',
+            'description' => 'Complete 5 adventures',
+            'category' => 'exploration',
+            'points' => 50,
+            'icon' => '🎒',
+            'requirements' => ['adventures_completed' => 5],
+            'hidden' => false
+        ],
+        'seasoned_adventurer' => [
+            'name' => 'Seasoned Adventurer',
+            'description' => 'Complete 10 adventures',
+            'category' => 'exploration',
+            'points' => 100,
+            'icon' => '🗺️',
+            'requirements' => ['adventures_completed' => 10],
+            'hidden' => false
+        ],
+        'veteran_explorer' => [
+            'name' => 'Veteran Explorer',
+            'description' => 'Complete 25 adventures',
+            'category' => 'exploration',
+            'points' => 200,
+            'icon' => '🧭',
+            'requirements' => ['adventures_completed' => 25],
+            'hidden' => false
+        ],
+        'master_explorer' => [
+            'name' => 'Master Explorer',
+            'description' => 'Complete 50 adventures',
+            'category' => 'exploration',
+            'points' => 400,
+            'icon' => '🏔️',
+            'requirements' => ['adventures_completed' => 50],
+            'hidden' => false
+        ],
+        'legendary_adventurer' => [
+            'name' => 'Legendary Adventurer',
+            'description' => 'Complete 100 adventures',
+            'category' => 'exploration',
+            'points' => 750,
+            'icon' => '⭐',
+            'requirements' => ['adventures_completed' => 100],
+            'hidden' => false
+        ],
+        'path_master' => [
+            'name' => 'Path Master',
+            'description' => 'Complete 250 adventures',
+            'category' => 'exploration',
+            'points' => 1500,
+            'icon' => '🌟',
+            'requirements' => ['adventures_completed' => 250],
+            'hidden' => false
+        ],
         'road_master' => [
             'name' => 'Master of Roads',
-            'description' => 'Complete adventures on all 4 roads',
+            'description' => 'Complete adventures on all 10 roads',
             'category' => 'exploration',
-            'points' => 150,
-            'icon' => '🗺️',
-            'requirements' => ['roads_explored' => 4],
+            'points' => 300,
+            'icon' => '🛤️',
+            'requirements' => ['roads_explored' => 10],
             'hidden' => false
         ],
         'weather_walker' => [
@@ -74,6 +209,42 @@ class AchievementService
             'points' => 100,
             'icon' => '🌦️',
             'requirements' => ['weather_conditions_experienced' => 5],
+            'hidden' => false
+        ],
+        'node_explorer' => [
+            'name' => 'Node Explorer',
+            'description' => 'Complete 100 adventure nodes',
+            'category' => 'exploration',
+            'points' => 150,
+            'icon' => '🔍',
+            'requirements' => ['nodes_completed' => 100],
+            'hidden' => false
+        ],
+        'node_master' => [
+            'name' => 'Node Master',
+            'description' => 'Complete 500 adventure nodes',
+            'category' => 'exploration',
+            'points' => 400,
+            'icon' => '🗂️',
+            'requirements' => ['nodes_completed' => 500],
+            'hidden' => false
+        ],
+        'treasure_hunter' => [
+            'name' => 'Treasure Hunter',
+            'description' => 'Complete 25 treasure nodes',
+            'category' => 'exploration',
+            'points' => 125,
+            'icon' => '💎',
+            'requirements' => ['treasure_nodes_completed' => 25],
+            'hidden' => false
+        ],
+        'resource_gatherer' => [
+            'name' => 'Resource Gatherer',
+            'description' => 'Complete 25 resource gathering nodes',
+            'category' => 'exploration',
+            'points' => 100,
+            'icon' => '🌿',
+            'requirements' => ['resource_nodes_completed' => 25],
             'hidden' => false
         ],
 
@@ -115,7 +286,182 @@ class AchievementService
             'hidden' => false
         ],
 
+        // Crafting Achievements
+        'first_recipe' => [
+            'name' => 'Recipe Discoverer',
+            'description' => 'Discover your first crafting recipe',
+            'category' => 'crafting',
+            'points' => 25,
+            'icon' => '📜',
+            'requirements' => ['recipes_discovered' => 1],
+            'hidden' => false
+        ],
+        'recipe_collector' => [
+            'name' => 'Recipe Collector',
+            'description' => 'Discover 10 crafting recipes',
+            'category' => 'crafting',
+            'points' => 100,
+            'icon' => '📚',
+            'requirements' => ['recipes_discovered' => 10],
+            'hidden' => false
+        ],
+        'recipe_master' => [
+            'name' => 'Recipe Master',
+            'description' => 'Discover 25 crafting recipes',
+            'category' => 'crafting',
+            'points' => 250,
+            'icon' => '🏆',
+            'requirements' => ['recipes_discovered' => 25],
+            'hidden' => false
+        ],
+        'all_recipes' => [
+            'name' => 'Master Cookbook',
+            'description' => 'Discover all available crafting recipes',
+            'category' => 'crafting',
+            'points' => 500,
+            'icon' => '📖',
+            'requirements' => ['recipes_discovered' => 50], // Assuming 50 total recipes
+            'hidden' => false
+        ],
+        'first_craft' => [
+            'name' => 'First Craft',
+            'description' => 'Craft your first item',
+            'category' => 'crafting',
+            'points' => 15,
+            'icon' => '🔨',
+            'requirements' => ['items_crafted' => 1],
+            'hidden' => false
+        ],
+        'first_weapon_craft' => [
+            'name' => 'Weapon Smith',
+            'description' => 'Craft your first weapon',
+            'category' => 'crafting',
+            'points' => 50,
+            'icon' => '⚒️',
+            'requirements' => ['weapons_crafted' => 1],
+            'hidden' => false
+        ],
+        'first_armor_craft' => [
+            'name' => 'Armor Smith',
+            'description' => 'Craft your first piece of armor',
+            'category' => 'crafting',
+            'points' => 50,
+            'icon' => '🛡️',
+            'requirements' => ['armor_crafted' => 1],
+            'hidden' => false
+        ],
+        'first_potion_craft' => [
+            'name' => 'Alchemist',
+            'description' => 'Craft your first potion',
+            'category' => 'crafting',
+            'points' => 30,
+            'icon' => '🧪',
+            'requirements' => ['potions_crafted' => 1],
+            'hidden' => false
+        ],
+        'prolific_crafter' => [
+            'name' => 'Prolific Crafter',
+            'description' => 'Craft 50 items',
+            'category' => 'crafting',
+            'points' => 150,
+            'icon' => '⚙️',
+            'requirements' => ['items_crafted' => 50],
+            'hidden' => false
+        ],
+        'master_crafter' => [
+            'name' => 'Master Crafter',
+            'description' => 'Craft 100 items',
+            'category' => 'crafting',
+            'points' => 300,
+            'icon' => '🏗️',
+            'requirements' => ['items_crafted' => 100],
+            'hidden' => false
+        ],
+        'legendary_crafter' => [
+            'name' => 'Legendary Crafter',
+            'description' => 'Craft 250 items',
+            'category' => 'crafting',
+            'points' => 600,
+            'icon' => '👑',
+            'requirements' => ['items_crafted' => 250],
+            'hidden' => false
+        ],
+
+        // Equipment Achievements
+        'first_equipment' => [
+            'name' => 'First Equipment',
+            'description' => 'Equip your first item',
+            'category' => 'equipment',
+            'points' => 10,
+            'icon' => '👕',
+            'requirements' => ['items_equipped' => 1],
+            'hidden' => false
+        ],
+        'fully_equipped' => [
+            'name' => 'Fully Equipped',
+            'description' => 'Fill all equipment slots',
+            'category' => 'equipment',
+            'points' => 100,
+            'icon' => '⚔️',
+            'requirements' => ['all_slots_filled' => 1],
+            'hidden' => false
+        ],
+        'uncommon_set' => [
+            'name' => 'Uncommon Warrior',
+            'description' => 'Equip uncommon or better items in all slots',
+            'category' => 'equipment',
+            'points' => 150,
+            'icon' => '🟢',
+            'requirements' => ['all_slots_uncommon_plus' => 1],
+            'hidden' => false
+        ],
+        'rare_set' => [
+            'name' => 'Rare Champion',
+            'description' => 'Equip rare or better items in all slots',
+            'category' => 'equipment',
+            'points' => 300,
+            'icon' => '🔵',
+            'requirements' => ['all_slots_rare_plus' => 1],
+            'hidden' => false
+        ],
+        'epic_set' => [
+            'name' => 'Epic Hero',
+            'description' => 'Equip epic or better items in all slots',
+            'category' => 'equipment',
+            'points' => 500,
+            'icon' => '🟣',
+            'requirements' => ['all_slots_epic_plus' => 1],
+            'hidden' => false
+        ],
+        'legendary_set' => [
+            'name' => 'Legendary Champion',
+            'description' => 'Equip legendary items in all slots',
+            'category' => 'equipment',
+            'points' => 1000,
+            'icon' => '🟠',
+            'requirements' => ['all_slots_legendary' => 1],
+            'hidden' => false
+        ],
+        'equipment_hoarder' => [
+            'name' => 'Equipment Hoarder',
+            'description' => 'Own 100 pieces of equipment',
+            'category' => 'equipment',
+            'points' => 100,
+            'icon' => '📦',
+            'requirements' => ['equipment_owned' => 100],
+            'hidden' => false
+        ],
+
         // Character Development Achievements
+        'first_level' => [
+            'name' => 'Level Up',
+            'description' => 'Reach character level 2',
+            'category' => 'character',
+            'points' => 25,
+            'icon' => '📊',
+            'requirements' => ['player_level' => 2],
+            'hidden' => false
+        ],
         'level_up' => [
             'name' => 'Growing Stronger',
             'description' => 'Reach character level 5',
@@ -134,13 +480,78 @@ class AchievementService
             'requirements' => ['player_level' => 10],
             'hidden' => false
         ],
+        'legendary_hero' => [
+            'name' => 'Legendary Hero',
+            'description' => 'Reach character level 20',
+            'category' => 'character',
+            'points' => 400,
+            'icon' => '🌟',
+            'requirements' => ['player_level' => 20],
+            'hidden' => false
+        ],
+        'max_level' => [
+            'name' => 'Ultimate Power',
+            'description' => 'Reach the maximum character level',
+            'category' => 'character',
+            'points' => 750,
+            'icon' => '👑',
+            'requirements' => ['player_level' => 50],
+            'hidden' => false
+        ],
+
+        // Economy Achievements
+        'first_coin' => [
+            'name' => 'First Coin',
+            'description' => 'Earn your first 100 gold',
+            'category' => 'economy',
+            'points' => 10,
+            'icon' => '🪙',
+            'requirements' => ['total_currency_earned' => 100],
+            'hidden' => false
+        ],
         'wealthy' => [
             'name' => 'Wealthy',
             'description' => 'Accumulate 10,000 gold',
-            'category' => 'character',
+            'category' => 'economy',
             'points' => 100,
             'icon' => '💰',
             'requirements' => ['total_currency_earned' => 10000],
+            'hidden' => false
+        ],
+        'rich' => [
+            'name' => 'Rich Adventurer',
+            'description' => 'Accumulate 50,000 gold',
+            'category' => 'economy',
+            'points' => 250,
+            'icon' => '💎',
+            'requirements' => ['total_currency_earned' => 50000],
+            'hidden' => false
+        ],
+        'millionaire' => [
+            'name' => 'Millionaire',
+            'description' => 'Accumulate 1,000,000 gold',
+            'category' => 'economy',
+            'points' => 1000,
+            'icon' => '🏆',
+            'requirements' => ['total_currency_earned' => 1000000],
+            'hidden' => false
+        ],
+        'merchant' => [
+            'name' => 'Merchant',
+            'description' => 'Sell 50 items',
+            'category' => 'economy',
+            'points' => 75,
+            'icon' => '🛒',
+            'requirements' => ['items_sold' => 50],
+            'hidden' => false
+        ],
+        'trader' => [
+            'name' => 'Master Trader',
+            'description' => 'Sell 200 items',
+            'category' => 'economy',
+            'points' => 200,
+            'icon' => '💼',
+            'requirements' => ['items_sold' => 200],
             'hidden' => false
         ],
 
@@ -234,12 +645,12 @@ class AchievementService
         $player->persistent_currency += $currencyBonus;
         $player->save();
 
-        Log::info("Achievement unlocked", [
-            'player_id' => $player->id,
-            'achievement' => $achievementId,
-            'points' => $definition['points'],
-            'currency_bonus' => $currencyBonus
-        ]);
+        // Log::info("Achievement unlocked", [
+        //     'player_id' => $player->id,
+        //     'achievement' => $achievementId,
+        //     'points' => $definition['points'],
+        //     'currency_bonus' => $currencyBonus
+        // ]);
 
         return $achievement;
     }
@@ -256,20 +667,55 @@ class AchievementService
         $npcs = $player->npcs;
         $settledNPCs = $npcs->where('village_status', 'settled');
         
+        // Get player equipment stats
+        $equipmentStats = $this->getEquipmentStats($player);
+        
         return [
+            // Character stats
             'player_level' => $player->level,
             'total_currency_earned' => $player->persistent_currency,
+            
+            // Combat stats
+            'combat_victories' => $this->getCombatStats($player, 'victories'),
+            'critical_hits' => $this->getCombatStats($player, 'critical_hits'),
+            'close_call_victories' => $this->getCombatStats($player, 'close_calls'),
+            'bosses_defeated' => $this->getCombatStats($player, 'bosses'),
+            
+            // Adventure & Exploration stats
+            'adventures_completed' => $player->adventures()->where('status', 'completed')->count(),
+            'roads_explored' => $this->getRoadsExplored($player),
+            'weather_conditions_experienced' => $this->getWeatherConditionsExperienced($player),
+            'nodes_completed' => $this->getNodesCompleted($player),
+            'treasure_nodes_completed' => $this->getSpecificNodesCompleted($player, 'treasure'),
+            'resource_nodes_completed' => $this->getSpecificNodesCompleted($player, 'resource_gathering'),
+            'perfect_adventures' => $this->getPerfectAdventures($player),
+            
+            // Crafting & Recipe stats
+            'recipes_discovered' => $this->getRecipesDiscovered($player),
+            'items_crafted' => $this->getCraftingStats($player, 'total'),
+            'weapons_crafted' => $this->getCraftingStats($player, 'weapons'),
+            'armor_crafted' => $this->getCraftingStats($player, 'armor'),
+            'potions_crafted' => $this->getCraftingStats($player, 'potions'),
+            
+            // Equipment stats
+            'items_equipped' => $this->getEquipmentStats($player, 'total_equipped'),
+            'all_slots_filled' => $equipmentStats['all_slots_filled'],
+            'all_slots_uncommon_plus' => $equipmentStats['all_slots_uncommon_plus'],
+            'all_slots_rare_plus' => $equipmentStats['all_slots_rare_plus'],
+            'all_slots_epic_plus' => $equipmentStats['all_slots_epic_plus'],
+            'all_slots_legendary' => $equipmentStats['all_slots_legendary'],
+            'equipment_owned' => $this->getEquipmentOwned($player),
+            
+            // Economy stats
+            'items_sold' => $this->getItemsSold($player),
+            
+            // Village stats
             'npcs_recruited' => $settledNPCs->count(),
             'specializations_unlocked' => $player->villageSpecializations->count(),
             'friendly_npcs' => $settledNPCs->where('relationship_score', '>=', 15)->count(),
             'devoted_npcs' => $settledNPCs->where('relationship_score', '>=', 25)->count(),
-            'adventures_completed' => $player->adventures()->where('status', 'completed')->count(),
-            'combat_victories' => $this->getCombatStats($player, 'victories'),
-            'critical_hits' => $this->getCombatStats($player, 'critical_hits'),
-            'close_call_victories' => $this->getCombatStats($player, 'close_calls'),
-            'roads_explored' => $this->getRoadsExplored($player),
-            'weather_conditions_experienced' => $this->getWeatherConditionsExperienced($player),
-            'perfect_adventures' => $this->getPerfectAdventures($player),
+            
+            // Special stats (for hidden achievements)
             'critical_misses_single_combat' => 0 // This would be tracked in real-time during combat
         ];
     }
@@ -284,8 +730,109 @@ class AchievementService
             'victories' => $completedAdventures * 3, // Assume 3 combats per adventure
             'critical_hits' => (int)($completedAdventures * 0.5), // 1 crit per 2 adventures
             'close_calls' => (int)($completedAdventures * 0.1), // Rare occurrences
+            'bosses' => $completedAdventures, // 1 boss per adventure
             default => 0
         };
+    }
+
+    private function getNodesCompleted(Player $player): int
+    {
+        // In a real implementation, this would sum up all completed nodes from adventures
+        // For now, estimate based on completed adventures (assume 15 nodes per adventure)
+        return $player->adventures()->where('status', 'completed')->count() * 15;
+    }
+
+    private function getSpecificNodesCompleted(Player $player, string $nodeType): int
+    {
+        // In a real implementation, this would query specific node types from adventure data
+        // For now, estimate based on completed adventures
+        $completedAdventures = $player->adventures()->where('status', 'completed')->count();
+        
+        return match($nodeType) {
+            'treasure' => (int)($completedAdventures * 2), // Assume 2 treasure nodes per adventure
+            'resource_gathering' => (int)($completedAdventures * 1.5), // Assume 1-2 resource nodes per adventure
+            default => 0
+        };
+    }
+
+    private function getRecipesDiscovered(Player $player): int
+    {
+        // This would query the player's discovered recipes
+        // For now, estimate based on adventures and level
+        $adventuresCompleted = $player->adventures()->where('status', 'completed')->count();
+        return min(50, (int)($adventuresCompleted * 0.8) + ($player->level * 0.5));
+    }
+
+    private function getCraftingStats(Player $player, string $craftType): int
+    {
+        // In a real implementation, this would query crafting logs
+        // For now, estimate based on player level and recipes discovered
+        $recipesDiscovered = $this->getRecipesDiscovered($player);
+        
+        return match($craftType) {
+            'total' => (int)($recipesDiscovered * 1.5), // Total items crafted
+            'weapons' => (int)($recipesDiscovered * 0.3), // 30% are weapons
+            'armor' => (int)($recipesDiscovered * 0.4), // 40% are armor pieces
+            'potions' => (int)($recipesDiscovered * 0.3), // 30% are potions
+            default => 0
+        };
+    }
+
+    private function getEquipmentStats(Player $player, ?string $statType = null): array|int
+    {
+        // Get all equipped items for the player
+        $equippedItems = \App\Models\PlayerItem::where('player_id', $player->id)
+            ->where('is_equipped', true)
+            ->with('item')
+            ->get();
+
+        if ($statType === 'total_equipped') {
+            return $equippedItems->count();
+        }
+
+        // Define equipment slots (adjust based on your game's equipment system)
+        $requiredSlots = ['weapon', 'helmet', 'chest', 'legs', 'boots', 'gloves', 'accessory1', 'accessory2'];
+        $filledSlots = [];
+        
+        foreach ($equippedItems as $equippedItem) {
+            $slot = $equippedItem->item->equipment_slot ?? 'unknown';
+            $filledSlots[$slot] = $equippedItem->item->rarity ?? 'common';
+        }
+
+        $allSlotsFilled = count($filledSlots) >= count($requiredSlots) ? 1 : 0;
+        
+        // Check rarity requirements
+        $rarityHierarchy = ['common' => 1, 'uncommon' => 2, 'rare' => 3, 'epic' => 4, 'legendary' => 5];
+        
+        $allUncommonPlus = $allSlotsFilled && collect($filledSlots)->every(fn($rarity) => ($rarityHierarchy[$rarity] ?? 1) >= 2) ? 1 : 0;
+        $allRarePlus = $allSlotsFilled && collect($filledSlots)->every(fn($rarity) => ($rarityHierarchy[$rarity] ?? 1) >= 3) ? 1 : 0;
+        $allEpicPlus = $allSlotsFilled && collect($filledSlots)->every(fn($rarity) => ($rarityHierarchy[$rarity] ?? 1) >= 4) ? 1 : 0;
+        $allLegendary = $allSlotsFilled && collect($filledSlots)->every(fn($rarity) => ($rarityHierarchy[$rarity] ?? 1) >= 5) ? 1 : 0;
+
+        return [
+            'all_slots_filled' => $allSlotsFilled,
+            'all_slots_uncommon_plus' => $allUncommonPlus,
+            'all_slots_rare_plus' => $allRarePlus,
+            'all_slots_epic_plus' => $allEpicPlus,
+            'all_slots_legendary' => $allLegendary,
+        ];
+    }
+
+    private function getEquipmentOwned(Player $player): int
+    {
+        // Count all equipment items in inventory
+        return \App\Models\PlayerItem::where('player_id', $player->id)
+            ->whereHas('item', function($query) {
+                $query->whereIn('type', ['weapon', 'armor']);
+            })
+            ->count();
+    }
+
+    private function getItemsSold(Player $player): int
+    {
+        // In a real implementation, this would query transaction logs
+        // For now, estimate based on player level and adventures
+        return (int)($player->level * 2 + $player->adventures()->where('status', 'completed')->count() * 1.5);
     }
 
     private function getRoadsExplored(Player $player): int
@@ -440,13 +987,40 @@ class AchievementService
     {
         // Map game events to achievement checks
         $eventMap = [
+            // Combat events
             'combat_victory' => ['combat_victories'],
             'critical_hit' => ['critical_hits'],
+            'close_call_victory' => ['close_call_victories'],
+            'boss_defeated' => ['bosses_defeated'],
+            
+            // Adventure & Exploration events
             'adventure_completed' => ['adventures_completed'],
-            'npc_recruited' => ['npcs_recruited'],
-            'specialization_unlocked' => ['specializations_unlocked'],
+            'node_completed' => ['nodes_completed'],
+            'treasure_node_completed' => ['treasure_nodes_completed'],
+            'resource_node_completed' => ['resource_nodes_completed'],
+            
+            // Crafting events
+            'recipe_discovered' => ['recipes_discovered'],
+            'item_crafted' => ['items_crafted'],
+            'weapon_crafted' => ['weapons_crafted'],
+            'armor_crafted' => ['armor_crafted'],
+            'potion_crafted' => ['potions_crafted'],
+            
+            // Equipment events
+            'item_equipped' => ['items_equipped'],
+            'equipment_slot_filled' => ['all_slots_filled'],
+            'equipment_upgrade' => ['all_slots_uncommon_plus', 'all_slots_rare_plus', 'all_slots_epic_plus', 'all_slots_legendary'],
+            
+            // Economy events
+            'item_sold' => ['items_sold'],
+            'currency_earned' => ['total_currency_earned'],
+            
+            // Character progression events
             'level_gained' => ['player_level'],
-            'close_call_victory' => ['close_call_victories']
+            
+            // Village events
+            'npc_recruited' => ['npcs_recruited'],
+            'specialization_unlocked' => ['specializations_unlocked']
         ];
 
         if (isset($eventMap[$eventType])) {

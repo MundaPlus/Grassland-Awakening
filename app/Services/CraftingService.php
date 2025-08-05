@@ -65,6 +65,9 @@ class CraftingService
                 'times_crafted' => DB::raw('times_crafted + 1')
             ]);
 
+            // Trigger crafting achievements
+            $this->triggerCraftingAchievements($player, $recipe);
+
             return [
                 'success' => true,
                 'item' => $resultItem,
@@ -73,6 +76,33 @@ class CraftingService
                 'gold_spent' => $recipe->gold_cost
             ];
         });
+    }
+
+    private function triggerCraftingAchievements(Player $player, CraftingRecipe $recipe): void
+    {
+        $achievementService = app(\App\Services\AchievementService::class);
+        
+        // General item crafted achievement
+        $achievementService->processGameEvent($player, 'item_crafted');
+
+        // Specific type crafting achievements based on result item type
+        $resultItem = $recipe->resultItem;
+        if ($resultItem) {
+            $itemType = $resultItem->type;
+            
+            // Map item types to achievement events
+            if ($itemType === 'weapon') {
+                $achievementService->processGameEvent($player, 'weapon_crafted');
+            } elseif ($itemType === 'armor') {
+                $achievementService->processGameEvent($player, 'armor_crafted');
+            } elseif ($itemType === 'consumable') {
+                // Check if it's a potion based on name or subtype
+                $itemName = strtolower($resultItem->name);
+                if (str_contains($itemName, 'potion') || $resultItem->subtype === 'potion') {
+                    $achievementService->processGameEvent($player, 'potion_crafted');
+                }
+            }
+        }
     }
 
     public function upgradeItem(Player $player, CraftingRecipe $upgradeRecipe, PlayerItem $baseItem): array

@@ -34,7 +34,7 @@
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-md-6">
-                            <div class="btn-group" role="group" aria-label="Achievement categories">
+                            <div class="btn-group flex-wrap" role="group" aria-label="Achievement categories">
                                 <button type="button" class="btn btn-outline-primary active" onclick="filterAchievements('all')" id="filter-all">
                                     All
                                 </button>
@@ -44,11 +44,26 @@
                                 <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('exploration')" id="filter-exploration">
                                     Exploration
                                 </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('crafting')" id="filter-crafting">
+                                    Crafting
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('equipment')" id="filter-equipment">
+                                    Equipment
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('character')" id="filter-character">
+                                    Character
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('economy')" id="filter-economy">
+                                    Economy
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('village')" id="filter-village">
+                                    Village
+                                </button>
                                 <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('social')" id="filter-social">
                                     Social
                                 </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('collection')" id="filter-collection">
-                                    Collection
+                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('secret')" id="filter-secret">
+                                    Secret
                                 </button>
                             </div>
                         </div>
@@ -133,38 +148,45 @@
                         </div>
                         <div class="col-9">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h3 class="h6 mb-0 {{ $achievement->pivot ? 'text-warning' : 'text-muted' }}" id="achievement-{{ $achievement->id }}">
+                                <h3 class="h6 mb-0 {{ $achievement->pivot ? 'text-warning' : 'text-muted' }}" id="achievement-{{ $achievement->id ?? $loop->index }}">
                                     {{ $achievement->name }}
                                 </h3>
-                                <span class="badge bg-{{ $achievement->category === 'combat' ? 'danger' : ($achievement->category === 'exploration' ? 'success' : ($achievement->category === 'social' ? 'info' : 'secondary')) }}" 
+                                @php
+                                    $categoryColors = [
+                                        'combat' => 'danger',
+                                        'exploration' => 'success', 
+                                        'crafting' => 'warning',
+                                        'equipment' => 'primary',
+                                        'character' => 'info',
+                                        'economy' => 'warning',
+                                        'village' => 'secondary',
+                                        'social' => 'info',
+                                        'secret' => 'dark'
+                                    ];
+                                    $badgeColor = $categoryColors[$achievement->category] ?? 'secondary';
+                                @endphp
+                                <span class="badge bg-{{ $badgeColor }}" 
                                       aria-label="Category {{ $achievement->category }}">
                                     {{ ucfirst($achievement->category) }}
                                 </span>
                             </div>
                             
-                            <p class="small {{ $achievement->pivot ? 'text-body' : 'text-muted' }} mb-2" id="achievement-desc-{{ $achievement->id }}">
+                            <p class="small {{ $achievement->pivot ? 'text-body' : 'text-muted' }} mb-2" id="achievement-desc-{{ $achievement->id ?? $loop->index }}">
                                 {{ $achievement->description }}
                             </p>
 
                             <!-- Progress Bar for Trackable Achievements -->
-                            @if($achievement->is_progress_based && $achievement->pivot)
+                            @if($achievement->is_progress_based && !$achievement->pivot)
                             <div class="progress mb-2" role="progressbar" 
-                                 aria-valuenow="{{ $achievement->pivot->progress }}" 
+                                 aria-valuenow="{{ $achievement->current_progress ?? 0 }}" 
                                  aria-valuemin="0" 
                                  aria-valuemax="{{ $achievement->target_value }}"
-                                 aria-label="Achievement progress {{ $achievement->pivot->progress }} out of {{ $achievement->target_value }}">
-                                <div class="progress-bar" style="width: {{ ($achievement->pivot->progress / $achievement->target_value) * 100 }}%">
-                                    {{ $achievement->pivot->progress }} / {{ $achievement->target_value }}
-                                </div>
-                            </div>
-                            @elseif($achievement->is_progress_based && !$achievement->pivot)
-                            <div class="progress mb-2" role="progressbar" 
-                                 aria-valuenow="0" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="{{ $achievement->target_value }}"
-                                 aria-label="Achievement progress 0 out of {{ $achievement->target_value }}">
-                                <div class="progress-bar" style="width: 0%">
-                                    0 / {{ $achievement->target_value }}
+                                 aria-label="Achievement progress {{ $achievement->current_progress ?? 0 }} out of {{ $achievement->target_value }}">
+                                @php
+                                    $progressPercent = $achievement->target_value > 0 ? (($achievement->current_progress ?? 0) / $achievement->target_value) * 100 : 0;
+                                @endphp
+                                <div class="progress-bar" style="width: {{ $progressPercent }}%">
+                                    {{ $achievement->current_progress ?? 0 }} / {{ $achievement->target_value }}
                                 </div>
                             </div>
                             @endif
@@ -370,13 +392,17 @@ function announceToScreenReader(message) {
 
 // Keyboard navigation support
 document.addEventListener('keydown', function(e) {
-    if (e.altKey && e.key >= '1' && e.key <= '5') {
+    if (e.altKey && e.key >= '1' && e.key <= '9') {
         e.preventDefault();
-        const categories = ['all', 'combat', 'exploration', 'social', 'collection'];
+        const categories = ['all', 'combat', 'exploration', 'crafting', 'equipment', 'character', 'economy', 'village', 'social'];
         const index = parseInt(e.key) - 1;
         if (categories[index]) {
             filterAchievements(categories[index]);
         }
+    }
+    if (e.altKey && e.key === '0') {
+        e.preventDefault();
+        filterAchievements('secret');
     }
 });
 </script>

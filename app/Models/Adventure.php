@@ -76,6 +76,10 @@ class Adventure extends Model
         $this->status = 'completed';
         $this->completed_at = now();
         $this->save();
+
+        // Trigger achievement events for adventure completion
+        $achievementService = app(\App\Services\AchievementService::class);
+        $achievementService->processGameEvent($this->player, 'adventure_completed');
     }
 
     public function abandon(): void
@@ -98,6 +102,35 @@ class Adventure extends Model
             $completedNodes[] = $nodeId;
             $this->completed_nodes = $completedNodes;
             $this->save();
+
+            // Trigger achievement events for node completion
+            $this->triggerNodeCompletionAchievements($nodeId);
+        }
+    }
+
+    private function triggerNodeCompletionAchievements(string $nodeId): void
+    {
+        $achievementService = app(\App\Services\AchievementService::class);
+        
+        // General node completion achievement
+        $achievementService->processGameEvent($this->player, 'node_completed');
+
+        // Find node type in generated map and trigger specific achievements
+        $mapData = $this->generated_map ?? [];
+        if (isset($mapData['map']['nodes'])) {
+            foreach ($mapData['map']['nodes'] as $level => $levelNodes) {
+                foreach ($levelNodes as $node) {
+                    if ($node['id'] === $nodeId) {
+                        // Trigger specific node type achievements
+                        if ($node['type'] === 'treasure') {
+                            $achievementService->processGameEvent($this->player, 'treasure_node_completed');
+                        } elseif ($node['type'] === 'resource_gathering') {
+                            $achievementService->processGameEvent($this->player, 'resource_node_completed');
+                        }
+                        break 2; // Break out of both loops
+                    }
+                }
+            }
         }
     }
 

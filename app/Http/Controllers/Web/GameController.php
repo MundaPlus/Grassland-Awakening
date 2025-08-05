@@ -239,23 +239,81 @@ class GameController extends Controller
     public function achievements()
     {
         $player = $this->getOrCreatePlayer();
+        $achievementService = app(\App\Services\AchievementService::class);
         
-        // Get all achievements and player's unlocked ones
-        $allAchievements = \App\Models\Achievement::all();
-        $playerAchievements = $player->achievements;
-        $recentAchievements = collect([]); // Empty for now, will be populated when achievements are implemented
+        // Get player achievements from the service
+        $achievementData = $achievementService->getPlayerAchievements($player, false);
         
-        $unlockedCount = $playerAchievements->count();
-        $totalCount = $allAchievements->count();
-        $totalPoints = $playerAchievements->sum('points');
+        // Get recent achievements (last 7 days) - using the new unlocked achievements data
+        $recentAchievements = collect();
+        $recentDate = now()->subDays(7);
+        foreach ($achievementData['unlocked'] as $unlockedAchievement) {
+            $unlockedAt = \Carbon\Carbon::parse($unlockedAchievement['unlocked_at']);
+            if ($unlockedAt->gte($recentDate)) {
+                $achievement = (object) $unlockedAchievement;
+                $achievement->id = $unlockedAchievement['id'];
+                $achievement->pivot = (object) ['unlocked_at' => $unlockedAt];
+                // Add missing properties for template consistency
+                $achievement->rewards = null;
+                $recentAchievements->push($achievement);
+            }
+        }
+        $recentAchievements = $recentAchievements->sortByDesc(function($achievement) {
+            return $achievement->pivot->unlocked_at;
+        });
 
+        // Combine unlocked and progress achievements for the view
+        $allAchievementsForView = collect();
+        
+        // Add unlocked achievements
+        foreach ($achievementData['unlocked'] as $unlockedAchievement) {
+            $achievement = (object) $unlockedAchievement;
+            $achievement->id = $unlockedAchievement['id']; // Use the achievement ID from the data
+            $achievement->pivot = (object) [
+                'unlocked_at' => \Carbon\Carbon::parse($unlockedAchievement['unlocked_at'])
+            ];
+            // Add missing properties expected by the template
+            $achievement->is_progress_based = false; // Most achievements are not progress-based
+            $achievement->target_value = null;
+            $achievement->hints = null;
+            $achievement->rewards = null;
+            $allAchievementsForView->push($achievement);
+        }
+        
+        // Add progress achievements (not unlocked yet)
+        foreach ($achievementData['progress'] as $progressAchievement) {
+            $achievement = (object) $progressAchievement;
+            $achievement->id = $progressAchievement['id']; // Use the achievement ID from the data
+            $achievement->pivot = null; // Not unlocked
+            
+            // Add missing properties expected by the template
+            $achievement->is_progress_based = true; // Progress achievements are trackable
+            
+            // Get the highest requirement value as target and current progress
+            $targetValue = 100; // default
+            $currentProgress = 0;
+            if (!empty($progressAchievement['requirements'])) {
+                $targetValue = max(array_column($progressAchievement['requirements'], 'required'));
+                $currentProgress = max(array_column($progressAchievement['requirements'], 'current'));
+            }
+            $achievement->target_value = $targetValue;
+            $achievement->current_progress = $currentProgress;
+            $achievement->completion_percentage = $progressAchievement['completion_percentage'];
+            
+            $achievement->hints = null;
+            $achievement->rewards = null;
+            $allAchievementsForView->push($achievement);
+        }
+
+        $totalCount = count($achievementData['unlocked']) + count($achievementData['progress']);
+        
         $data = [
             'player' => $player,
-            'achievements' => $allAchievements,
+            'achievements' => $allAchievementsForView,
             'recentAchievements' => $recentAchievements,
-            'unlockedCount' => $unlockedCount,
-            'totalCount' => $totalCount,
-            'totalPoints' => $totalPoints
+            'unlockedCount' => $achievementData['achievement_count'],
+            'totalCount' => $totalCount > 0 ? $totalCount : 1, // Prevent division by zero
+            'totalPoints' => $achievementData['total_points']
         ];
         
         return view('game.achievements', $data);
