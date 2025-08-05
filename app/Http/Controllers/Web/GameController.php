@@ -1406,6 +1406,9 @@ class GameController extends Controller
             case 'enter_combat':
                 return $this->prepareForCombat($player, $adventure, $nodeDetails);
                 
+            case 'gather_resources':
+                return $this->processResourceGatheringNode($player, $adventure, $nodeDetails);
+                
             default:
                 // Handle NPC interactions with dialogue choices like 'interact_npc:greet'
                 if (strpos($action, 'interact_npc:') === 0) {
@@ -1530,6 +1533,76 @@ class GameController extends Controller
         return [
             'success' => true,
             'message' => "You rest peacefully and recover {$healingAmount} HP.",
+            'redirect' => route('game.adventure-map', $adventure->id)
+        ];
+    }
+
+    private function processResourceGatheringNode($player, $adventure, $nodeDetails)
+    {
+        $resourceType = $nodeDetails['resource_type'] ?? 'foraging';
+        $resourceAmount = $nodeDetails['resource_amount'] ?? 2;
+        $gatheringDifficulty = $nodeDetails['gathering_difficulty'] ?? 12;
+        $hasSpecialMaterials = $nodeDetails['special_materials'] ?? false;
+        $currencyReward = intval($nodeDetails['currency_reward'] ?? 15);
+
+        $message = "You search the area for resources... ";
+        
+        // Determine skill for gathering
+        $skill = match($resourceType) {
+            'mining' => 'str',
+            'herbalism' => 'wis', 
+            'logging' => 'str',
+            'foraging' => 'wis',
+            default => 'wis'
+        };
+        
+        // Make skill check
+        $skillValue = $player->getTotalStat($skill);
+        $roll = rand(1, 20);
+        $total = $roll + floor(($skillValue - 10) / 2);
+        
+        $success = $total >= $gatheringDifficulty;
+        $message .= "You make a {$resourceType} check (rolled {$roll} + " . floor(($skillValue - 10) / 2) . " = {$total} vs DC {$gatheringDifficulty}). ";
+        
+        if ($success) {
+            $message .= "Success! ";
+            
+            // Award currency
+            $player->persistent_currency += $currencyReward;
+            $player->save();
+            $adventure->addCurrencyEarned($currencyReward);
+            $message .= "You earn {$currencyReward} gold. ";
+            
+            // Generate resources based on type and level
+            $resources = $this->generateResourceMaterials($resourceType, $nodeDetails['level'], $resourceAmount, $hasSpecialMaterials);
+            
+            foreach ($resources as $resource) {
+                $this->addItemToPlayerInventory($player, $resource['item'], $resource['quantity']);
+                $message .= "You gathered {$resource['quantity']}x {$resource['item']->name}. ";
+            }
+        } else {
+            $message .= "Failure. You only manage to gather a small amount of common materials. ";
+            
+            // Give small consolation reward
+            $consolationGold = intval($currencyReward * 0.3);
+            $player->persistent_currency += $consolationGold;
+            $player->save();
+            $adventure->addCurrencyEarned($consolationGold);
+            $message .= "You earn {$consolationGold} gold for your effort.";
+        }
+        
+        // Try to discover recipe from this resource node
+        $recipeDiscovery = $this->tryDiscoverRecipeFromNode($adventure, $nodeDetails);
+        if ($recipeDiscovery) {
+            $message .= " " . $recipeDiscovery['message'];
+        }
+        
+        $adventure->addCompletedNode($nodeDetails['id']);
+        $this->moveToNextNode($adventure);
+        
+        return [
+            'success' => true,
+            'message' => $message,
             'redirect' => route('game.adventure-map', $adventure->id)
         ];
     }
@@ -2322,5 +2395,94 @@ class GameController extends Controller
             'description' => 'You are exploring the ' . ucfirst($adventure->road) . ' road.',
             'options' => ['Continue forward', 'Rest', 'Search area']
         ];
+    }
+
+    /**
+     * Generate resource materials based on gathering type and level
+     */
+    private function generateResourceMaterials(string $resourceType, int $level, int $amount, bool $hasSpecialMaterials): array
+    {
+        $resources = [];
+        
+        // Define material pools based on resource type
+        $materialPools = [
+            'mining' => [
+                'common' => ['Copper Ore', 'Rough Quartz'],
+                'uncommon' => ['Bronze Ingot', 'Polished Amethyst'],
+                'rare' => ['Iron Ingot', 'Emerald Shard'],
+                'epic' => ['Mithril Ore', 'Sapphire Crystal'],
+                'legendary' => ['Adamantium Shard', 'Perfect Diamond']
+            ],
+            'herbalism' => [
+                'common' => ['Healing Moss', 'Blue Sage'],
+                'uncommon' => ['Red Clover', 'Mystic Thistle'],
+                'rare' => ['Golden Root', 'Arcane Lotus']
+            ],
+            'logging' => [
+                'common' => ['Oak Wood'],
+                'uncommon' => ['Enchanted Willow'],
+                'rare' => ['Ancient Heartwood']
+            ],
+            'foraging' => [
+                'common' => ['Healing Moss', 'Blue Sage', 'Oak Wood'],
+                'uncommon' => ['Red Clover', 'Mystic Thistle', 'Enchanted Willow'],
+                'rare' => ['Golden Root', 'Arcane Lotus', 'Ancient Heartwood']
+            ]
+        ];
+        
+        $pool = $materialPools[$resourceType] ?? $materialPools['foraging'];
+        
+        // Determine rarity based on level and special materials
+        $rarityWeights = [
+            'common' => max(10, 70 - ($level * 5)),
+            'uncommon' => min(40, 20 + ($level * 2)),
+            'rare' => min(25, $level * 2),
+            'epic' => max(0, $level - 8),
+            'legendary' => max(0, $level - 12)
+        ];
+        
+        if ($hasSpecialMaterials) {
+            // Boost higher rarities
+            $rarityWeights['rare'] *= 2;
+            $rarityWeights['epic'] *= 3;
+            $rarityWeights['legendary'] *= 4;
+        }
+        
+        // Generate materials
+        for ($i = 0; $i < $amount; $i++) {
+            $rarity = $this->weightedRandomRarity($rarityWeights);
+            
+            if (isset($pool[$rarity]) && !empty($pool[$rarity])) {
+                $materialName = $pool[$rarity][array_rand($pool[$rarity])];
+                $item = \App\Models\Item::where('name', $materialName)->first();
+                
+                if ($item) {
+                    $quantity = rand(1, 3); // 1-3 materials per gathering action
+                    $resources[] = [
+                        'item' => $item,
+                        'quantity' => $quantity
+                    ];
+                }
+            }
+        }
+        
+        return $resources;
+    }
+    
+    private function weightedRandomRarity(array $weights): string
+    {
+        $totalWeight = array_sum($weights);
+        if ($totalWeight <= 0) return 'common';
+        
+        $random = mt_rand(1, $totalWeight);
+        
+        foreach ($weights as $rarity => $weight) {
+            $random -= $weight;
+            if ($random <= 0) {
+                return $rarity;
+            }
+        }
+        
+        return 'common';
     }
 }

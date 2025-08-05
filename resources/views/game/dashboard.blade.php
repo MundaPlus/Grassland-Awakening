@@ -271,7 +271,7 @@
         </div>
     </div>
     
-    <!-- Reputation Summary -->
+    {{-- Reputation Summary - Hidden for now
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header bg-secondary text-white">
@@ -331,6 +331,7 @@
             </div>
         </div>
     </div>
+    --}}
 </div>
 
 @endsection

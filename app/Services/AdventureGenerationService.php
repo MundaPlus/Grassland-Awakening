@@ -277,6 +277,15 @@ class AdventureGenerationService
                     'special_services' => $this->getRestServices($level)
                 ]);
                 
+            case 'resource_gathering':
+                return array_merge($baseNode, [
+                    'resource_type' => $this->selectResourceType($level),
+                    'resource_amount' => $this->calculateResourceAmount($level),
+                    'gathering_difficulty' => $this->getGatheringDifficulty($level),
+                    'currency_reward' => $this->calculateCurrencyReward($level, false) * 0.7, // Slightly less gold than treasure
+                    'special_materials' => $this->hasSpecialMaterials($level)
+                ]);
+                
             case 'boss':
                 return array_merge($baseNode, [
                     'boss_type' => $this->selectBoss(),
@@ -391,7 +400,7 @@ class AdventureGenerationService
 
     private function randomNodeType(int $level): string
     {
-        $types = ['combat', 'treasure', 'event', 'npc_encounter'];
+        $types = ['combat', 'treasure', 'event', 'npc_encounter', 'resource_gathering'];
         
         // Add rest nodes on levels 4 and 7
         if (in_array($level, [4, 7])) {
@@ -399,10 +408,11 @@ class AdventureGenerationService
         }
         
         $weights = [
-            'combat' => 45,
-            'treasure' => 20,
-            'event' => 15,
-            'npc_encounter' => 15,
+            'combat' => 40,
+            'treasure' => 18,
+            'event' => 12,
+            'npc_encounter' => 12,
+            'resource_gathering' => 13,
             'rest' => 5
         ];
         
@@ -778,5 +788,41 @@ class AdventureGenerationService
             'value' => rand(1, $level),
             'description' => 'Valuable information about the area'
         ];
+    }
+
+    /**
+     * Resource Gathering Methods
+     */
+    private function selectResourceType(int $level): string
+    {
+        $resourceTypes = [
+            'mining' => ['metal', 'gem'],
+            'herbalism' => ['herb_health', 'herb_mana'],
+            'logging' => ['wood'],
+            'foraging' => ['herb_health', 'herb_mana', 'wood']
+        ];
+        
+        $gatheringType = array_rand($resourceTypes);
+        return $gatheringType;
+    }
+
+    private function calculateResourceAmount(int $level): int
+    {
+        // Base amount increases with level
+        $baseAmount = 2 + intval($level / 3);
+        return $baseAmount + rand(0, 2);
+    }
+
+    private function getGatheringDifficulty(int $level): int
+    {
+        // DC for skill checks, scales with level
+        return 10 + $level + rand(0, 3);
+    }
+
+    private function hasSpecialMaterials(int $level): bool
+    {
+        // Higher level nodes have better chance for rare materials
+        $chance = min(0.3, 0.1 + ($level * 0.015));
+        return mt_rand(1, 100) / 100 <= $chance;
     }
 }

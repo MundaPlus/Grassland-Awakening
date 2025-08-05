@@ -86,6 +86,25 @@
             color: var(--text-high-contrast) !important;
         }
         
+        /* Prevent navbar FOUC during initial load */
+        .navbar {
+            min-height: 56px; /* Ensure navbar has minimum height during load */
+        }
+        
+        .navbar-brand, .nav-link {
+            visibility: visible !important; /* Force visibility during load */
+            opacity: 1 !important;
+        }
+        
+        /* Light mode navbar styling to ensure visibility */
+        .navbar-brand, .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        
+        .navbar-brand:hover, .nav-link:hover {
+            color: white !important;
+        }
+        
         .dark .card {
             background-color: var(--bg-secondary);
             border-color: var(--border-color);
@@ -364,13 +383,13 @@
                             🏆 Achievements
                         </a>
                     </li>
-                    <li class="nav-item">
+                    {{-- <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('game.reputation') ? 'active' : '' }}" 
                            href="{{ route('game.reputation') }}"
                            aria-current="{{ request()->routeIs('game.reputation') ? 'page' : 'false' }}">
                             ⚖️ Reputation
                         </a>
-                    </li>
+                    </li> --}}
                 </ul>
                 
                 <ul class="navbar-nav">
@@ -501,6 +520,9 @@
         
         // Announce successful form submissions
         document.addEventListener('DOMContentLoaded', function() {
+            // Ensure theme icons are updated after DOM loads
+            updateThemeToggleIcons();
+            
             @if(session('success'))
                 announcePageChange("{{ session('success') }}");
             @endif
@@ -585,9 +607,8 @@
             }
         }
 
-        // Initialize theme
+        // Initialize theme immediately (already done in head, but ensure consistency)
         setInitialTheme();
-        updateThemeToggleIcons();
 
         // Add click event listener for theme toggle
         const themeToggleBtn = document.getElementById('theme-toggle');

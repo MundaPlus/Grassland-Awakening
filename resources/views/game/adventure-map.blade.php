@@ -187,6 +187,7 @@
                                                     @case('combat') ⚔️ @break
                                                     @case('treasure') 💰 @break
                                                     @case('event') 📜 @break
+                                                    @case('resource_gathering') 🌿 @break
                                                     @case('rest') 🏕️ @break
                                                     @case('boss') 👹 @break
                                                     @default ❓
@@ -253,6 +254,7 @@
                                         @case('combat') ⚔️ @break
                                         @case('treasure') 💰 @break
                                         @case('event') 📜 @break
+                                        @case('resource_gathering') 🌿 @break
                                         @case('rest') 🏕️ @break
                                         @case('boss') 👹 @break
                                         @default ❓
@@ -286,6 +288,12 @@
                                         @case('event')
                                             <button class="btn btn-info btn-sm w-100 mb-2" onclick="exploreEvent('{{ $currentNode['id'] }}')">
                                                 📜 Investigate Event
+                                            </button>
+                                        @break
+                                        
+                                        @case('resource_gathering')
+                                            <button class="btn btn-success btn-sm w-100 mb-2" onclick="gatherResources('{{ $currentNode['id'] }}')">
+                                                🌿 Gather Resources
                                             </button>
                                         @break
                                         
@@ -578,6 +586,10 @@ function searchTreasure(nodeId) {
 
 function exploreEvent(nodeId) {
     processNodeAction(nodeId, 'explore_event');
+}
+
+function gatherResources(nodeId) {
+    processNodeAction(nodeId, 'gather_resources');
 }
 
 function interactWithNPC(nodeId, dialogueChoice) {
