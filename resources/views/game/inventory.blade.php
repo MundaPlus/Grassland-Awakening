@@ -190,7 +190,12 @@
                                 </span>
                             </div>
                             <div class="flex-grow-1">
-                                <div class="fw-bold">{{ $recentItem->item->name }}</div>
+                                <div class="fw-bold">
+                                    {{ $recentItem->getDisplayName() }}
+                                    @if($recentItem->hasAffixes())
+                                        <small class="text-muted">✨</small>
+                                    @endif
+                                </div>
                                 <small class="text-muted">{{ $recentItem->created_at->diffForHumans() }}</small>
                             </div>
                             @if($recentItem->quantity > 1)
@@ -311,7 +316,7 @@ function equipItem(inventoryItemId, slot) {
         if (data.success) {
             location.reload();
         } else {
-            alert(data.message || 'Failed to equip item');
+            console.error('Failed to equip item:', data.message);
         }
     })
     .catch(error => console.error('Error:', error));
@@ -330,7 +335,7 @@ function useItem(inventoryItemId) {
         if (data.success) {
             location.reload();
         } else {
-            alert(data.message || 'Failed to use item');
+            console.error('Failed to use item:', data.message);
         }
     })
     .catch(error => console.error('Error:', error));
@@ -343,24 +348,28 @@ function sortInventory(sortBy) {
 }
 
 function repairAllItems() {
-    if (confirm('Repair all damaged items? This will cost gold based on item values.')) {
-        fetch('/game/inventory/repair-all', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to repair items');
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
+    GameUI.showConfirmModal(
+        'Repair All Items',
+        'Repair all damaged items? This will cost gold based on item values.',
+        function() {
+            fetch('/game/inventory/repair-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    console.error('Failed to repair items:', data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    );
 }
 </script>
 @endsection

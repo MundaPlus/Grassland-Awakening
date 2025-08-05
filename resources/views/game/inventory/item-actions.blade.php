@@ -48,36 +48,40 @@ function repairItem(inventoryItemId) {
             bootstrap.Modal.getInstance(document.getElementById('itemDetailModal')).hide();
             location.reload();
         } else {
-            alert(data.message || 'Failed to repair item');
+            console.error('Failed to repair item:', data.message);
         }
     })
     .catch(error => console.error('Error:', error));
 }
 
 function dropItem(inventoryItemId) {
-    if (confirm('Are you sure you want to drop this item? This action cannot be undone.')) {
-        fetch(`/game/inventory/drop/${inventoryItemId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('itemDetailModal')).hide();
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to drop item');
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
+    GameUI.showConfirmModal(
+        'Drop Item',
+        'Are you sure you want to drop this item? This action cannot be undone.',
+        function() {
+            fetch(`/game/inventory/drop/${inventoryItemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('itemDetailModal')).hide();
+                    location.reload();
+                } else {
+                    console.error('Failed to drop item:', data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    );
 }
 
 function viewCraftingRecipes(itemId) {
     // This will be implemented when crafting system is added
-    alert('Crafting system coming soon!');
+    console.log('Crafting system coming soon!');
 }
 </script>

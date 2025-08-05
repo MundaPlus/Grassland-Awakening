@@ -558,13 +558,45 @@ class GameController extends Controller
         $player = $this->getOrCreatePlayer();
         $slot = $request->input('slot');
         
-        if (!$slot) {
-            // Auto-determine slot from item
-            $inventoryItem = $player->inventory()->with('item')->findOrFail($id);
-            $slot = $inventoryItem->item->getEquipmentSlot();
+        // Try to find the item in both inventory systems
+        $inventoryItem = $player->inventory()->with('item')->find($id);
+        $playerItem = $player->playerItems()->with('item')->find($id);
+        
+        if (!$inventoryItem && !$playerItem) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Item not found in inventory.'
+            ], 404);
         }
         
-        $success = $player->equipItemFromInventory($id, $slot);
+        $item = $inventoryItem ? $inventoryItem->item : $playerItem->item;
+        
+        if (!$slot) {
+            // Auto-determine slot from item
+            $slot = $item->getEquipmentSlot();
+        }
+        
+        // Handle null slots for items that need special slot selection
+        if (!$slot) {
+            $slot = $this->determineEquipmentSlot($item);
+        }
+        
+        if (!$slot) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to determine equipment slot for this item.'
+            ]);
+        }
+        
+        $success = false;
+        
+        if ($inventoryItem) {
+            // Use old inventory system method
+            $success = $player->equipItemFromInventory($id, $slot);
+        } else if ($playerItem) {
+            // Use new PlayerItem system method
+            $success = $this->equipPlayerItemMethod($player, $playerItem, $slot);
+        }
         
         if ($success) {
             return response()->json([
@@ -577,6 +609,65 @@ class GameController extends Controller
                 'message' => 'Unable to equip item. Check level requirements and item type.'
             ]);
         }
+    }
+    
+    private function equipPlayerItemMethod(Player $player, $playerItem, string $slot): bool
+    {
+        if (!$playerItem->item->canEquip($player)) {
+            return false;
+        }
+        
+        if ($playerItem->is_equipped) {
+            return false; // Already equipped
+        }
+        
+        // Handle two-handed weapons and conflicting slots
+        if ($slot === Equipment::SLOT_TWO_HANDED_WEAPON) {
+            $this->unequipPlayerItemSlot($player, Equipment::SLOT_WEAPON_1);
+            $this->unequipPlayerItemSlot($player, Equipment::SLOT_WEAPON_2);
+            $this->unequipPlayerItemSlot($player, Equipment::SLOT_SHIELD);
+        } elseif (in_array($slot, [Equipment::SLOT_WEAPON_1, Equipment::SLOT_WEAPON_2, Equipment::SLOT_SHIELD])) {
+            $this->unequipPlayerItemSlot($player, Equipment::SLOT_TWO_HANDED_WEAPON);
+        }
+        
+        // Unequip current item in slot
+        $this->unequipPlayerItemSlot($player, $slot);
+        
+        // Equip the new item
+        $playerItem->is_equipped = true;
+        $playerItem->equipment_slot = $slot;
+        $playerItem->save();
+        
+        return true;
+    }
+    
+    private function unequipPlayerItemSlot(Player $player, string $slot): void
+    {
+        $currentItem = $player->playerItems()
+            ->where('is_equipped', true)
+            ->where('equipment_slot', $slot)
+            ->first();
+            
+        if ($currentItem) {
+            $currentItem->is_equipped = false;
+            $currentItem->equipment_slot = null;
+            $currentItem->save();
+        }
+    }
+    
+    private function determineEquipmentSlot(Item $item): ?string
+    {
+        // Handle one-handed weapons - default to weapon_1
+        if (in_array($item->subtype, [Item::SUBTYPE_SWORD, Item::SUBTYPE_AXE, Item::SUBTYPE_MACE, Item::SUBTYPE_DAGGER])) {
+            return Equipment::SLOT_WEAPON_1;
+        }
+        
+        // Handle rings - default to ring_1
+        if ($item->subtype === Item::SUBTYPE_RING) {
+            return Equipment::SLOT_RING_1;
+        }
+        
+        return null;
     }
 
     public function unequipToInventory($slot)
@@ -1943,6 +2034,120 @@ class GameController extends Controller
     public function accessibility()
     {
         return view('game.accessibility');
+    }
+
+    // Crafting Methods
+
+    public function getCraftingRecipes(Request $request)
+    {
+        $player = $this->getOrCreatePlayer();
+        $category = $request->get('category', null);
+        
+        $craftingService = app(\App\Services\CraftingService::class);
+        $recipes = $craftingService->getAvailableRecipesForPlayer($player, $category === 'all' ? null : $category);
+        
+        return response()->json([
+            'success' => true,
+            'recipes' => $recipes
+        ]);
+    }
+
+    public function craftItem(Request $request)
+    {
+        $request->validate([
+            'recipe_id' => 'required|integer|exists:crafting_recipes,id'
+        ]);
+
+        $player = $this->getOrCreatePlayer();
+        $recipeId = $request->get('recipe_id');
+        
+        $recipe = \App\Models\CraftingRecipe::with(['resultItem', 'materials.materialItem'])->findOrFail($recipeId);
+        
+        try {
+            $craftingService = app(\App\Services\CraftingService::class);
+            $result = $craftingService->craftItem($player, $recipe);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Item crafted successfully!',
+                'item' => $result['item'],
+                'quantity' => $result['quantity'],
+                'experience_gained' => $result['experience_gained'],
+                'gold_spent' => $result['gold_spent'],
+                'player_gold' => $player->fresh()->persistent_currency
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function upgradeItem(Request $request)
+    {
+        $request->validate([
+            'recipe_id' => 'required|integer|exists:crafting_recipes,id',
+            'base_item_id' => 'required|integer|exists:player_items,id'
+        ]);
+
+        $player = $this->getOrCreatePlayer();
+        $recipeId = $request->get('recipe_id');
+        $baseItemId = $request->get('base_item_id');
+        
+        $recipe = \App\Models\CraftingRecipe::with(['resultItem', 'materials.materialItem'])->findOrFail($recipeId);
+        $baseItem = $player->playerItems()->findOrFail($baseItemId);
+        
+        try {
+            $craftingService = app(\App\Services\CraftingService::class);
+            $result = $craftingService->upgradeItem($player, $recipe, $baseItem);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Item upgraded successfully!',
+                'upgraded_item' => $result['upgraded_item'],
+                'quantity' => $result['quantity'],
+                'experience_gained' => $result['experience_gained'],
+                'gold_spent' => $result['gold_spent'],
+                'player_gold' => $player->fresh()->persistent_currency
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function learnRecipe(Request $request)
+    {
+        $request->validate([
+            'recipe_id' => 'required|integer|exists:crafting_recipes,id',
+            'discovery_method' => 'nullable|string'
+        ]);
+
+        $player = $this->getOrCreatePlayer();
+        $recipeId = $request->get('recipe_id');
+        $discoveryMethod = $request->get('discovery_method', 'manual');
+        
+        $recipe = \App\Models\CraftingRecipe::findOrFail($recipeId);
+        
+        $craftingService = app(\App\Services\CraftingService::class);
+        $learned = $craftingService->discoverRecipe($player, $recipe, $discoveryMethod);
+        
+        if ($learned) {
+            return response()->json([
+                'success' => true,
+                'message' => "You learned the recipe: {$recipe->name}!"
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'You already know this recipe.'
+            ], 400);
+        }
     }
 
     private function getOrCreatePlayer(): Player

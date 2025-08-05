@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Player extends Model
 {
@@ -530,9 +531,20 @@ class Player extends Model
 
     public function getInventoryByCategory(string $category): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->inventory()->with('item')->whereHas('item', function($query) use ($category) {
+        // Get items from old inventory system
+        $oldInventoryItems = $this->inventory()->with('item')->whereHas('item', function($query) use ($category) {
             $query->where('type', $category);
         })->get();
+        
+        // Get items from new PlayerItem system, but only unequipped ones
+        $newPlayerItems = $this->playerItems()->with('item')
+            ->where('is_equipped', false)
+            ->whereHas('item', function($query) use ($category) {
+                $query->where('type', $category);
+            })->get();
+        
+        // Combine both collections
+        return $oldInventoryItems->concat($newPlayerItems);
     }
 
     public function getInventorySlots(): array
@@ -558,9 +570,23 @@ class Player extends Model
 
         $item = $inventoryItem->item;
 
-        // Check if item can be equipped in this slot
-        if ($item->getEquipmentSlot() !== $slot) {
+        // Check if item can be equipped in this slot - handle flexible slots
+        $itemSlot = $item->getEquipmentSlot();
+        if ($itemSlot && $itemSlot !== $slot) {
             return false;
+        }
+        
+        // For items with null slots (weapons/rings), validate the slot is appropriate
+        if (!$itemSlot) {
+            if (in_array($item->subtype, [Item::SUBTYPE_SWORD, Item::SUBTYPE_AXE, Item::SUBTYPE_MACE, Item::SUBTYPE_DAGGER])) {
+                if (!in_array($slot, [Equipment::SLOT_WEAPON_1, Equipment::SLOT_WEAPON_2])) {
+                    return false;
+                }
+            } elseif ($item->subtype === Item::SUBTYPE_RING) {
+                if (!in_array($slot, [Equipment::SLOT_RING_1, Equipment::SLOT_RING_2])) {
+                    return false;
+                }
+            }
         }
 
         // Check if player meets requirements
@@ -622,14 +648,22 @@ class Player extends Model
 
     public function getTotalInventoryItems(): int
     {
-        return $this->inventory()->sum('quantity');
+        $oldSystemTotal = $this->inventory()->sum('quantity');
+        $newSystemTotal = $this->playerItems()->where('is_equipped', false)->sum('quantity');
+        return $oldSystemTotal + $newSystemTotal;
     }
 
     public function getInventoryValue(): int
     {
-        return $this->inventory()->with('item')->get()->sum(function($inventoryItem) {
+        $oldSystemValue = $this->inventory()->with('item')->get()->sum(function($inventoryItem) {
             return ($inventoryItem->item->value ?? 0) * $inventoryItem->quantity;
         });
+        
+        $newSystemValue = $this->playerItems()->with('item')->where('is_equipped', false)->get()->sum(function($playerItem) {
+            return ($playerItem->item->value ?? 0) * $playerItem->quantity;
+        });
+        
+        return $oldSystemValue + $newSystemValue;
     }
 
     /**
@@ -792,6 +826,53 @@ class Player extends Model
         } else {
             return $damageDice;
         }
+    }
+
+    // Crafting System Relations
+
+    public function knownRecipes(): BelongsToMany
+    {
+        return $this->belongsToMany(CraftingRecipe::class, 'player_known_recipes', 'player_id', 'recipe_id')
+                    ->withPivot(['learned_at', 'discovery_method', 'times_crafted'])
+                    ->withTimestamps();
+    }
+
+    public function learnRecipe(CraftingRecipe $recipe, string $discoveryMethod = null): bool
+    {
+        if ($this->knownRecipes()->where('recipe_id', $recipe->id)->exists()) {
+            return false; // Already known
+        }
+
+        $this->knownRecipes()->attach($recipe->id, [
+            'learned_at' => now(),
+            'discovery_method' => $discoveryMethod,
+            'times_crafted' => 0
+        ]);
+
+        return true;
+    }
+
+    public function knowsRecipe(CraftingRecipe $recipe): bool
+    {
+        return $this->knownRecipes()->where('recipe_id', $recipe->id)->exists();
+    }
+
+    public function canCraftRecipe(CraftingRecipe $recipe): bool
+    {
+        return $this->knowsRecipe($recipe) && 
+               $recipe->canPlayerCraft($this) && 
+               $recipe->hasRequiredMaterials($this);
+    }
+
+    public function getAvailableRecipesByCategory(string $category = null): \Illuminate\Database\Eloquent\Collection
+    {
+        $query = $this->knownRecipes()->with(['resultItem', 'materials.materialItem']);
+        
+        if ($category) {
+            $query->where('category', $category);
+        }
+        
+        return $query->get();
     }
 
 }

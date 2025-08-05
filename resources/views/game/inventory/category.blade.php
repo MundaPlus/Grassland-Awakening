@@ -46,7 +46,10 @@
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 class="mb-1 item-name rarity-{{ $inventoryItem->item->rarity }}">
-                                        {{ $inventoryItem->item->name }}
+                                        {{ $inventoryItem->getDisplayName() }}
+                                        @if($inventoryItem->hasAffixes())
+                                            <small class="text-muted">✨</small>
+                                        @endif
                                     </h6>
                                     <small class="text-muted">{{ ucfirst($inventoryItem->item->subtype) }}</small>
                                 </div>
@@ -70,12 +73,26 @@
                                     </small>
                                 @endif
                                 
-                                @if($inventoryItem->item->stats_modifiers)
+                                @php
+                                    $allStatModifiers = [];
+                                    if ($inventoryItem->item->stats_modifiers) {
+                                        $allStatModifiers = $inventoryItem->item->stats_modifiers;
+                                    }
+                                    if ($inventoryItem->affix_stat_modifiers) {
+                                        foreach ($inventoryItem->affix_stat_modifiers as $stat => $bonus) {
+                                            if (!isset($allStatModifiers[$stat])) {
+                                                $allStatModifiers[$stat] = 0;
+                                            }
+                                        }
+                                    }
+                                @endphp
+                                @if($allStatModifiers)
                                     <div class="stat-modifiers">
-                                        @foreach($inventoryItem->item->stats_modifiers as $stat => $bonus)
-                                            @if($bonus != 0)
-                                                <small class="text-{{ $bonus > 0 ? 'success' : 'danger' }} me-2">
-                                                    {{ strtoupper($stat) }} {{ $bonus > 0 ? '+' : '' }}{{ $inventoryItem->getEffectiveStatModifier($stat) }}
+                                        @foreach($allStatModifiers as $stat => $bonus)
+                                            @php $effectiveBonus = $inventoryItem->getEffectiveStatModifier($stat); @endphp
+                                            @if($effectiveBonus != 0)
+                                                <small class="text-{{ $effectiveBonus > 0 ? 'success' : 'danger' }} me-2">
+                                                    {{ strtoupper($stat) }} {{ $effectiveBonus > 0 ? '+' : '' }}{{ $effectiveBonus }}
                                                 </small>
                                             @endif
                                         @endforeach
@@ -106,7 +123,7 @@
                             <div class="item-actions mt-2">
                                 @if($inventoryItem->item->type === 'weapon' || $inventoryItem->item->type === 'armor' || $inventoryItem->item->type === 'accessory')
                                     <button class="btn btn-sm btn-outline-primary me-1" 
-                                            onclick="event.stopPropagation(); equipItem({{ $inventoryItem->id }}, '{{ $inventoryItem->item->getEquipmentSlot() }}')">
+                                            onclick="event.stopPropagation(); equipItem({{ $inventoryItem->id }}, '{{ $inventoryItem->getEquipmentSlot() }}')">
                                         Equip
                                     </button>
                                 @endif

@@ -55,6 +55,49 @@
     </div>
     @endif
 
+    <!-- Crafting Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Village Crafting</h2>
+                    <button type="button" class="btn btn-primary btn-sm" 
+                            data-bs-toggle="modal" data-bs-target="#craftingModal">
+                        <i class="fas fa-hammer" aria-hidden="true"></i> Open Crafting Station
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <i class="fas fa-hammer fa-2x text-primary mb-2" aria-hidden="true"></i>
+                                <h6>Blacksmith</h6>
+                                <p class="small text-muted mb-2">Craft weapons and armor</p>
+                                <small class="text-success">{{ $player->knownRecipes()->where('category', 'weapon')->count() + $player->knownRecipes()->where('category', 'armor')->count() }} recipes known</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <i class="fas fa-flask fa-2x text-success mb-2" aria-hidden="true"></i>
+                                <h6>Alchemy</h6>
+                                <p class="small text-muted mb-2">Brew potions and consumables</p>
+                                <small class="text-success">{{ $player->knownRecipes()->where('category', 'consumable')->count() }} recipes known</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <i class="fas fa-gem fa-2x text-warning mb-2" aria-hidden="true"></i>
+                                <h6>Enchanting</h6>
+                                <p class="small text-muted mb-2">Create magical accessories</p>
+                                <small class="text-success">{{ $player->knownRecipes()->where('category', 'accessory')->count() }} recipes known</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- NPCs Section -->
     <div class="row mb-4">
         <div class="col-12">
@@ -216,6 +259,66 @@
 </div>
 @endforeach
 
+<!-- Crafting Modal -->
+<div class="modal fade" id="craftingModal" tabindex="-1" aria-labelledby="craftingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="craftingModalLabel">Village Crafting Station</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Categories Navigation -->
+                    <div class="col-md-3">
+                        <div class="list-group">
+                            <button type="button" class="list-group-item list-group-item-action active" 
+                                    onclick="showCraftingCategory('all')">
+                                <i class="fas fa-list me-2"></i> All Recipes
+                            </button>
+                            <button type="button" class="list-group-item list-group-item-action" 
+                                    onclick="showCraftingCategory('weapon')">
+                                <i class="fas fa-sword me-2"></i> Weapons
+                            </button>
+                            <button type="button" class="list-group-item list-group-item-action" 
+                                    onclick="showCraftingCategory('armor')">
+                                <i class="fas fa-shield-alt me-2"></i> Armor
+                            </button>
+                            <button type="button" class="list-group-item list-group-item-action" 
+                                    onclick="showCraftingCategory('accessory')">
+                                <i class="fas fa-gem me-2"></i> Accessories
+                            </button>
+                            <button type="button" class="list-group-item list-group-item-action" 
+                                    onclick="showCraftingCategory('consumable')">
+                                <i class="fas fa-flask me-2"></i> Consumables
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Recipes List -->
+                    <div class="col-md-9">
+                        <div id="craftingContent">
+                            <div class="text-center py-4">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading recipes...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="me-auto">
+                    <small class="text-muted">
+                        <i class="fas fa-coins me-1"></i> Gold: <span id="playerGold">{{ $player->persistent_currency }}</span>
+                    </small>
+                </div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function trainNPC(npcId) {
     if (confirm('Train this NPC? This will cost gold and time.')) {
@@ -240,5 +343,201 @@ function trainNPC(npcId) {
         });
     }
 }
+
+// Crafting functionality
+let currentCategory = 'all';
+
+function showCraftingCategory(category) {
+    // Update active button
+    document.querySelectorAll('.list-group-item').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    currentCategory = category;
+    loadCraftingRecipes(category);
+}
+
+function loadCraftingRecipes(category = 'all') {
+    const contentDiv = document.getElementById('craftingContent');
+    contentDiv.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading recipes...</span></div></div>';
+    
+    fetch(`{{ url('game/crafting/recipes') }}?category=${category}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayRecipes(data.recipes);
+        } else {
+            contentDiv.innerHTML = '<div class="alert alert-danger">Failed to load recipes.</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        contentDiv.innerHTML = '<div class="alert alert-danger">An error occurred while loading recipes.</div>';
+    });
+}
+
+function displayRecipes(recipes) {
+    const contentDiv = document.getElementById('craftingContent');
+    
+    if (recipes.length === 0) {
+        contentDiv.innerHTML = '<div class="text-center py-4"><p class="text-muted">No recipes available in this category.</p></div>';
+        return;
+    }
+    
+    let html = '<div class="row">';
+    
+    recipes.forEach((recipeData, index) => {
+        const recipe = recipeData.recipe;
+        const canCraft = recipeData.can_craft;
+        const missingMaterials = recipeData.missing_materials;
+        const hasGold = recipeData.has_gold;
+        
+        const cardClass = canCraft ? 'border-success' : 'border-secondary';
+        const craftButtonClass = canCraft ? 'btn-success' : 'btn-outline-secondary';
+        const craftButtonDisabled = canCraft ? '' : 'disabled';
+        
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card h-100 ${cardClass}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">${recipe.name}</h6>
+                            <span class="badge bg-${getDifficultyColor(recipe.difficulty)}">${recipe.difficulty}</span>
+                        </div>
+                        <p class="card-text small text-muted">${recipe.description}</p>
+                        
+                        <!-- Result Item -->
+                        <div class="mb-2">
+                            <strong>Creates:</strong> ${recipe.result_quantity}x ${recipe.result_item.name}
+                        </div>
+                        
+                        <!-- Materials Required -->
+                        <div class="mb-2">
+                            <strong>Materials:</strong>
+                            <ul class="list-unstyled small mb-0">`;
+        
+        recipe.materials.forEach(material => {
+            const hasEnough = !missingMaterials.find(m => m.item.id === material.material_item.id);
+            const textClass = hasEnough ? 'text-success' : 'text-danger';
+            html += `<li class="${textClass}">${material.quantity_required}x ${material.material_item.name}</li>`;
+        });
+        
+        html += `
+                            </ul>
+                        </div>
+                        
+                        <!-- Costs and Requirements -->
+                        <div class="mb-3">
+                            <div class="row text-center small">
+                                <div class="col-4">
+                                    <div class="${hasGold ? 'text-success' : 'text-danger'}">
+                                        <i class="fas fa-coins"></i> ${recipe.gold_cost}
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-info">
+                                        <i class="fas fa-clock"></i> ${recipe.crafting_time}s
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-warning">
+                                        <i class="fas fa-star"></i> ${recipe.experience_reward} XP
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Craft Button -->
+                        <button type="button" class="btn ${craftButtonClass} w-100" 
+                                onclick="craftItem(${recipe.id})" ${craftButtonDisabled}>
+                            <i class="fas fa-hammer me-1"></i> Craft Item
+                        </button>
+                        
+                        ${!canCraft && missingMaterials.length > 0 ? `
+                        <div class="mt-2">
+                            <small class="text-danger">Missing: ${missingMaterials.map(m => m.item.name).join(', ')}</small>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    contentDiv.innerHTML = html;
+}
+
+function getDifficultyColor(difficulty) {
+    switch(difficulty) {
+        case 'basic': return 'success';
+        case 'intermediate': return 'warning';
+        case 'advanced': return 'danger';
+        case 'master': return 'dark';
+        default: return 'secondary';
+    }
+}
+
+function craftItem(recipeId) {
+    fetch(`{{ url('game/crafting/craft') }}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipe_id: recipeId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update player gold
+            document.getElementById('playerGold').textContent = data.player_gold;
+            
+            // Show success message
+            GameUI.showModal('Crafting Success', `
+                <div class="text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5>Item Crafted Successfully!</h5>
+                    <p>You crafted <strong>${data.quantity}x ${data.item.item.name}</strong></p>
+                    <p class="text-warning">+${data.experience_gained} XP gained</p>
+                    ${data.gold_spent > 0 ? `<p class="text-info">-${data.gold_spent} gold spent</p>` : ''}
+                </div>
+            `);
+            
+            // Refresh the recipes to update availability
+            loadCraftingRecipes(currentCategory);
+        } else {
+            GameUI.showModal('Crafting Failed', `
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5>Crafting Failed</h5>
+                    <p>${data.message}</p>
+                </div>
+            `);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        GameUI.showModal('Error', `
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h5>An Error Occurred</h5>
+                <p>Please try again later.</p>
+            </div>
+        `);
+    });
+}
+
+// Load recipes when modal is opened
+document.getElementById('craftingModal').addEventListener('shown.bs.modal', function () {
+    loadCraftingRecipes('all');
+});
 </script>
 @endsection

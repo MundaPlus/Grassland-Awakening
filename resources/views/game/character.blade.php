@@ -131,7 +131,10 @@
                                      style="position: absolute; {{ $config[0] }} width: 90px; height: 90px; z-index: 10;">
                                     @if(isset($equipment[$slot]) && $equipment[$slot])
                                         <div class="equipment-item-border {{ $equipment[$slot]->item->getRarityColor() }}" 
-                                             title="{{ $equipment[$slot]->item->name }}">
+                                             data-bs-toggle="tooltip" 
+                                             data-bs-html="true" 
+                                             data-bs-placement="top"
+                                             title="@include('game.partials.item-tooltip', ['item' => $equipment[$slot]])">
                                             <i class="{{ $config[1] }}"></i>
                                         </div>
                                     @else
@@ -150,7 +153,10 @@
                                  style="position: absolute; {{ $config[0] }} width: 180px; height: 180px; z-index: 10;">
                                 @if(isset($equipment[$slot]) && $equipment[$slot])
                                     <div class="equipment-item-border weapon-item {{ $equipment[$slot]->item->getRarityColor() }}" 
-                                         title="{{ $equipment[$slot]->item->name }}">
+                                         data-bs-toggle="tooltip" 
+                                         data-bs-html="true" 
+                                         data-bs-placement="top"
+                                         title="@include('game.partials.item-tooltip', ['item' => $equipment[$slot]])">
                                         <i class="{{ $config[1] }}"></i>
                                     </div>
                                 @else
@@ -670,6 +676,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const itemId = this.dataset.itemId;
             unequipPlayerItem(itemId);
         });
+    });
+    
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 

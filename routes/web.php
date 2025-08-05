@@ -192,4 +192,10 @@ Route::group(['namespace' => 'App\Http\Controllers\Web', 'prefix' => 'game', 'as
     Route::post('/npc/recruit', 'GameController@recruitNPC')->name('recruit-npc');
     Route::post('/npc/{id}/train', 'GameController@trainNPC')->name('train-npc');
     Route::get('/accessibility', 'GameController@accessibility')->name('accessibility');
+    
+    // Crafting Routes
+    Route::get('/crafting/recipes', 'GameController@getCraftingRecipes')->name('crafting-recipes');
+    Route::post('/crafting/craft', 'GameController@craftItem')->name('crafting-craft');
+    Route::post('/crafting/upgrade', 'GameController@upgradeItem')->name('crafting-upgrade');
+    Route::post('/crafting/learn-recipe', 'GameController@learnRecipe')->name('crafting-learn-recipe');
 });
