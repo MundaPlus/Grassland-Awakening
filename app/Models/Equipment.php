@@ -33,7 +33,8 @@ class Equipment extends Model
     const SLOT_NECK = 'neck';
     const SLOT_RING_1 = 'ring_1';
     const SLOT_RING_2 = 'ring_2';
-    const SLOT_ARTIFACT = 'artifact';
+    const SLOT_ARTIFACT_1 = 'artifact_1';
+    const SLOT_ARTIFACT_2 = 'artifact_2';
     const SLOT_WEAPON_1 = 'weapon_1';
     const SLOT_WEAPON_2 = 'weapon_2';
     const SLOT_SHIELD = 'shield';
@@ -53,7 +54,8 @@ class Equipment extends Model
             self::SLOT_NECK,
             self::SLOT_RING_1,
             self::SLOT_RING_2,
-            self::SLOT_ARTIFACT,
+            self::SLOT_ARTIFACT_1,
+            self::SLOT_ARTIFACT_2,
             self::SLOT_WEAPON_1,
             self::SLOT_WEAPON_2,
             self::SLOT_SHIELD,
@@ -94,7 +96,8 @@ class Equipment extends Model
             self::SLOT_NECK,
             self::SLOT_RING_1,
             self::SLOT_RING_2,
-            self::SLOT_ARTIFACT
+            self::SLOT_ARTIFACT_1,
+            self::SLOT_ARTIFACT_2
         ];
     }
 
@@ -178,7 +181,8 @@ class Equipment extends Model
             self::SLOT_NECK => 'Necklace',
             self::SLOT_RING_1 => 'Ring (Left)',
             self::SLOT_RING_2 => 'Ring (Right)',
-            self::SLOT_ARTIFACT => 'Artifact',
+            self::SLOT_ARTIFACT_1 => 'Artifact 1',
+            self::SLOT_ARTIFACT_2 => 'Artifact 2',
             self::SLOT_WEAPON_1 => 'Main Hand',
             self::SLOT_WEAPON_2 => 'Off Hand',
             self::SLOT_SHIELD => 'Shield',

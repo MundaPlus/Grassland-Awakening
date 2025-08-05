@@ -109,11 +109,12 @@
                                 'pants' => ['top: 65%; left: 10px;', 'fas fa-socks', 'Pants'],
                                 'boots' => ['top: 85%; left: 10px;', 'fas fa-shoe-prints', 'Boots'],
                                 
-                                // Right border - neck, rings, artifact (evenly spaced)
+                                // Right border - neck, rings, artifacts (evenly spaced)
                                 'neck' => ['top: 5%; right: 10px;', 'fas fa-gem', 'Necklace'],
                                 'ring_1' => ['top: 25%; right: 10px;', 'fas fa-ring', 'Ring 1'],
                                 'ring_2' => ['top: 45%; right: 10px;', 'fas fa-ring', 'Ring 2'],
-                                'artifact' => ['top: 65%; right: 10px;', 'fas fa-magic', 'Artifact'],
+                                'artifact_1' => ['top: 65%; right: 10px;', 'fas fa-magic', 'Artifact 1'],
+                                'artifact_2' => ['top: 85%; right: 10px;', 'fas fa-magic', 'Artifact 2'],
                             ];
                             
                             // Weapon slots - larger and positioned under character
@@ -293,51 +294,55 @@
                                     </li>
                                 </ul>
                                 
-                                <div class="tab-content" id="inventory-subcontent" style="max-height: 450px; overflow-y: auto;">
+                                <div class="tab-content" id="inventory-subcontent" style="max-height: 500px; overflow-y: auto;">
                                     @foreach(['weapons', 'armor', 'accessories'] as $category)
                                         <div class="tab-pane fade {{ $category === 'weapons' ? 'show active' : '' }}" id="{{ $category }}" role="tabpanel">
                                             @if($inventory[$category]->count() > 0)
-                                                @foreach($inventory[$category] as $playerItem)
-                                                    <div class="inventory-item mb-2 p-2 border rounded {{ $playerItem->item->getRarityColor() }}" data-item-id="{{ $playerItem->id }}">
-                                                        <div class="d-flex align-items-start">
-                                                            <div class="me-2">
-                                                                <img src="{{ $playerItem->item->getImagePath() }}" 
-                                                                     alt="{{ $playerItem->item->name }}" 
-                                                                     style="width: 32px; height: 32px; object-fit: contain; border-radius: 4px;">
-                                                            </div>
-                                                            <div class="flex-grow-1">
-                                                                <div class="fw-bold small">{{ $playerItem->item->name }}</div>
-                                                                <small class="text-muted">{{ ucfirst($playerItem->item->rarity) }}</small>
-                                                                @if($playerItem->item->stats_modifiers)
-                                                                    <div style="font-size: 0.8rem;">
-                                                                        @foreach($playerItem->item->stats_modifiers as $stat => $bonus)
-                                                                            @if($bonus != 0)
-                                                                                <span class="me-2">{{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}</span>
-                                                                            @endif
-                                                                        @endforeach
+                                                <div class="row g-2">
+                                                    @foreach($inventory[$category] as $playerItem)
+                                                        <div class="col-4">
+                                                            <div class="inventory-item-card p-2 border rounded {{ $playerItem->item->getRarityColor() }} h-100" data-item-id="{{ $playerItem->id }}">
+                                                                <div class="text-center mb-2">
+                                                                    <img src="{{ $playerItem->item->getImagePath() }}" 
+                                                                         alt="{{ $playerItem->item->name }}" 
+                                                                         style="width: 40px; height: 40px; object-fit: contain;">
+                                                                </div>
+                                                                <div class="text-center">
+                                                                    <div class="fw-bold" style="font-size: 0.75rem; line-height: 1.1;">{{ Str::limit($playerItem->item->name, 15) }}</div>
+                                                                    <small class="text-muted d-block" style="font-size: 0.7rem;">{{ ucfirst($playerItem->item->rarity) }}</small>
+                                                                    
+                                                                    @if($playerItem->item->stats_modifiers)
+                                                                        <div style="font-size: 0.65rem; margin: 2px 0;">
+                                                                            @foreach($playerItem->item->stats_modifiers as $stat => $bonus)
+                                                                                @if($bonus != 0)
+                                                                                    <div class="text-truncate">{{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}</div>
+                                                                                @endif
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($playerItem->item->damage_dice)
+                                                                        <div style="font-size: 0.65rem;" class="text-truncate">DMG: {{ $playerItem->item->damage_dice }}@if($playerItem->item->damage_bonus > 0)+{{ $playerItem->item->damage_bonus }}@endif</div>
+                                                                    @endif
+                                                                    @if($playerItem->item->ac_bonus)
+                                                                        <div style="font-size: 0.65rem;">AC: +{{ $playerItem->item->ac_bonus }}</div>
+                                                                    @endif
+                                                                    
+                                                                    <div class="mt-2">
+                                                                        @if($playerItem->canEquip())
+                                                                            <button class="btn btn-xs btn-success equip-item-btn w-100" data-item-id="{{ $playerItem->id }}" style="font-size: 0.7rem; padding: 2px 4px;">
+                                                                                Equip
+                                                                            </button>
+                                                                        @elseif($playerItem->canUnequip())
+                                                                            <button class="btn btn-xs btn-warning unequip-item-btn w-100" data-item-id="{{ $playerItem->id }}" style="font-size: 0.7rem; padding: 2px 4px;">
+                                                                                Unequip
+                                                                            </button>
+                                                                        @endif
                                                                     </div>
-                                                                @endif
-                                                                @if($playerItem->item->damage_dice)
-                                                                    <div style="font-size: 0.8rem;">Damage: {{ $playerItem->item->damage_dice }}@if($playerItem->item->damage_bonus > 0)+{{ $playerItem->item->damage_bonus }}@endif</div>
-                                                                @endif
-                                                                @if($playerItem->item->ac_bonus)
-                                                                    <div style="font-size: 0.8rem;">AC: +{{ $playerItem->item->ac_bonus }}</div>
-                                                                @endif
-                                                            </div>
-                                                            <div class="ms-2">
-                                                                @if($playerItem->canEquip())
-                                                                    <button class="btn btn-sm btn-success equip-item-btn" data-item-id="{{ $playerItem->id }}">
-                                                                        Equip
-                                                                    </button>
-                                                                @elseif($playerItem->canUnequip())
-                                                                    <button class="btn btn-sm btn-warning unequip-item-btn" data-item-id="{{ $playerItem->id }}">
-                                                                        Unequip
-                                                                    </button>
-                                                                @endif
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                @endforeach
+                                                    @endforeach
+                                                </div>
                                             @else
                                                 <div class="text-center text-muted py-3">
                                                     <i class="fas fa-box-open fa-2x mb-2"></i>
@@ -546,6 +551,17 @@
 .inventory-item:hover {
     transform: translateX(2px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.inventory-item-card {
+    transition: all 0.2s ease;
+    min-height: 120px;
+    cursor: pointer;
+}
+
+.inventory-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .character-avatar {

@@ -383,6 +383,13 @@
                             🏆 Achievements
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('game.skills') ? 'active' : '' }}" 
+                           href="{{ route('game.skills') }}"
+                           aria-current="{{ request()->routeIs('game.skills') ? 'page' : 'false' }}">
+                            🎯 Skills
+                        </a>
+                    </li>
                     {{-- <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('game.reputation') ? 'active' : '' }}" 
                            href="{{ route('game.reputation') }}"

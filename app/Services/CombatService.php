@@ -13,11 +13,13 @@ class CombatService
 {
     private WeatherService $weatherService;
     private AchievementService $achievementService;
+    private SkillService $skillService;
 
-    public function __construct(WeatherService $weatherService, AchievementService $achievementService)
+    public function __construct(WeatherService $weatherService, AchievementService $achievementService, SkillService $skillService)
     {
         $this->weatherService = $weatherService;
         $this->achievementService = $achievementService;
+        $this->skillService = $skillService;
     }
 
     public function initiateCombat(Player $player, array $enemyData, $adventure = null): array
@@ -143,8 +145,18 @@ class CombatService
 
         // Apply damage to player if any
         if (isset($result['damage']) && $result['damage'] > 0) {
-            $combatData['player']['current_hp'] -= $result['damage'];
+            $rawDamage = $result['damage'];
+            $damageReduction = $combatData['player']['damage_reduction'] ?? 0;
+            $finalDamage = max(1, $rawDamage - floor($rawDamage * ($damageReduction / 100)));
+            
+            $combatData['player']['current_hp'] -= $finalDamage;
             $combatData['player']['current_hp'] = max(0, $combatData['player']['current_hp']);
+            
+            // Update damage in result for logging
+            $result['damage'] = $finalDamage;
+            if ($damageReduction > 0 && $finalDamage < $rawDamage) {
+                $result['message'] .= " (Damage reduced by {$damageReduction}% from {$rawDamage} to {$finalDamage})";
+            }
         }
 
         // Check for combat end
@@ -165,12 +177,17 @@ class CombatService
         // Load equipment with items for combat calculations
         $player->load('equipment.item');
         
+        // Get skill bonuses
+        $skillBonuses = $this->skillService->getPassiveSkillBonuses($player);
+        $baseMaxHp = $player->max_hp;
+        $skillEnhancedMaxHp = $baseMaxHp + ($skillBonuses['health_bonus'] ?? 0);
+        
         return [
             'name' => $player->character_name,
             'level' => $player->level,
-            'max_hp' => $player->max_hp,
-            'current_hp' => $player->hp,
-            'hp' => $player->hp,
+            'max_hp' => $skillEnhancedMaxHp,
+            'current_hp' => min($player->hp, $skillEnhancedMaxHp), // Don't exceed new max
+            'hp' => min($player->hp, $skillEnhancedMaxHp),
             'ac' => $player->getTotalAC(), // Use equipment-enhanced AC
             'stats' => [
                 'str' => $player->getTotalStat('str'),
@@ -198,8 +215,35 @@ class CombatService
             ],
             'equipment' => $this->getPlayerWeaponInfo($player),
             'defending' => false,
-            'temp_effects' => []
+            'temp_effects' => [],
+            'skill_bonuses' => $skillBonuses,
+            'active_skills' => $this->getPlayerActiveSkillsForCombat($player),
+            'damage_reduction' => $skillBonuses['damage_reduction'] ?? 0
         ];
+    }
+
+    private function getPlayerActiveSkillsForCombat(Player $player): array
+    {
+        $activeSkills = $this->skillService->getAvailableActiveSkills($player);
+        $skillsForCombat = [];
+        
+        foreach ($activeSkills as $playerSkill) {
+            $skillsForCombat[] = [
+                'id' => $playerSkill->skill_id,
+                'name' => $playerSkill->skill->name,
+                'slug' => $playerSkill->skill->slug,
+                'description' => $playerSkill->skill->description,
+                'level' => $playerSkill->level,
+                'icon' => $playerSkill->skill->icon,
+                'cost' => $playerSkill->getCurrentCost(),
+                'cooldown' => $playerSkill->skill->getCooldownAtLevel($playerSkill->level),
+                'effects' => $playerSkill->getCurrentEffects(),
+                'is_on_cooldown' => $playerSkill->isOnCooldown(),
+                'cooldown_remaining' => $playerSkill->getRemainingCooldown()
+            ];
+        }
+        
+        return $skillsForCombat;
     }
 
     private function prepareEnemyForCombat(array $enemy): array
@@ -593,5 +637,153 @@ class CombatService
         $enemy['dex'] = (int)ceil($enemy['dex'] * (1 + ($enemy['level'] - 1) * 0.1));
 
         return $enemy;
+    }
+
+    public function useActiveSkill(array &$combatData, Player $player, string $skillSlug): array
+    {
+        // Find the skill in the player's available skills
+        $skill = null;
+        foreach ($combatData['player']['active_skills'] as $activeSkill) {
+            if ($activeSkill['slug'] === $skillSlug) {
+                $skill = $activeSkill;
+                break;
+            }
+        }
+        
+        if (!$skill) {
+            return ['success' => false, 'message' => 'Skill not found or not available'];
+        }
+        
+        if ($skill['is_on_cooldown']) {
+            return ['success' => false, 'message' => 'Skill is on cooldown'];
+        }
+        
+        // Use the skill through the service
+        $skillModel = \App\Models\Skill::where('slug', $skillSlug)->first();
+        $result = $this->skillService->useActiveSkill($player, $skillModel);
+        
+        if (!$result['success']) {
+            return $result;
+        }
+        
+        // Apply skill effects to combat
+        $effects = $result['effects'];
+        $target = isset($combatData['enemies']) ? 
+            $combatData['enemies'][array_key_first($combatData['enemies'])] : 
+            $combatData['enemy'];
+        
+        // Enhanced attack with skill effects
+        $enhancedResult = $this->applySkillToCombat($combatData, $player, $target, $skill, $effects);
+        
+        // Update skill cooldown status in combat data
+        foreach ($combatData['player']['active_skills'] as &$activeSkill) {
+            if ($activeSkill['slug'] === $skillSlug) {
+                $activeSkill['is_on_cooldown'] = true;
+                $activeSkill['cooldown_remaining'] = $skill['cooldown'];
+                break;
+            }
+        }
+        
+        return $enhancedResult;
+    }
+    
+    private function applySkillToCombat(array &$combatData, Player $player, array $target, array $skill, array $effects): array
+    {
+        $skillName = $skill['name'];
+        $weatherEffects = $combatData['weather_effects'] ?? [];
+        
+        // Calculate enhanced attack based on skill type
+        switch ($skill['slug']) {
+            case 'power-strike':
+                $damageMultiplier = $effects['damage_multiplier'] ?? 1.5;
+                $accuracyBonus = $effects['accuracy_bonus'] ?? 10;
+                
+                // Perform enhanced attack
+                $attackRoll = rand(1, 20);
+                $totalAttack = $attackRoll + $combatData['player']['modifiers']['str'] + $accuracyBonus;
+                $targetAC = $target['ac'];
+                
+                if ($attackRoll === 20 || $totalAttack >= $targetAC) {
+                    $baseDamage = $this->rollDamage($combatData['player'], $attackRoll === 20, $weatherEffects);
+                    $enhancedDamage = floor($baseDamage * $damageMultiplier);
+                    
+                    return [
+                        'success' => true,
+                        'damage' => $enhancedDamage,
+                        'message' => "{$combatData['player']['name']} uses {$skillName}! Powerful strike deals {$enhancedDamage} damage!",
+                        'skill_used' => $skillName
+                    ];
+                } else {
+                    return [
+                        'success' => false,
+                        'damage' => 0,
+                        'message' => "{$combatData['player']['name']} uses {$skillName} but misses!",
+                        'skill_used' => $skillName
+                    ];
+                }
+                
+            case 'aimed-shot':
+                $critChance = $effects['critical_chance'] ?? 25;
+                $critDamage = $effects['critical_damage'] ?? 1.5;
+                
+                $attackRoll = rand(1, 20);
+                $totalAttack = $attackRoll + $combatData['player']['modifiers']['dex'];
+                $targetAC = $target['ac'];
+                
+                if ($attackRoll === 20 || $totalAttack >= $targetAC) {
+                    $isCritical = ($attackRoll === 20) || (rand(1, 100) <= $critChance);
+                    $baseDamage = $this->rollDamage($combatData['player'], $isCritical, $weatherEffects);
+                    
+                    if ($isCritical) {
+                        $enhancedDamage = floor($baseDamage * $critDamage);
+                        return [
+                            'success' => true,
+                            'damage' => $enhancedDamage,
+                            'critical' => true,
+                            'message' => "{$combatData['player']['name']} uses {$skillName}! Critical aimed shot deals {$enhancedDamage} damage!",
+                            'skill_used' => $skillName
+                        ];
+                    } else {
+                        return [
+                            'success' => true,
+                            'damage' => $baseDamage,
+                            'message' => "{$combatData['player']['name']} uses {$skillName}! Precise shot deals {$baseDamage} damage!",
+                            'skill_used' => $skillName
+                        ];
+                    }
+                } else {
+                    return [
+                        'success' => false,
+                        'damage' => 0,
+                        'message' => "{$combatData['player']['name']} uses {$skillName} but the aimed shot misses!",
+                        'skill_used' => $skillName
+                    ];
+                }
+                
+            case 'heal':
+                $healAmount = $effects['heal_amount'] ?? 50;
+                $efficiency = $effects['efficiency'] ?? 100;
+                
+                $actualHeal = floor($healAmount * ($efficiency / 100));
+                $combatData['player']['current_hp'] = min(
+                    $combatData['player']['max_hp'], 
+                    $combatData['player']['current_hp'] + $actualHeal
+                );
+                
+                return [
+                    'success' => true,
+                    'healing' => $actualHeal,
+                    'message' => "{$combatData['player']['name']} uses {$skillName}! Restored {$actualHeal} health!",
+                    'skill_used' => $skillName
+                ];
+                
+            default:
+                // Generic skill use
+                return [
+                    'success' => true,
+                    'message' => "{$combatData['player']['name']} uses {$skillName}!",
+                    'skill_used' => $skillName
+                ];
+        }
     }
 }

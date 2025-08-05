@@ -4,7 +4,7 @@
             <div class="col-md-4 col-lg-3 mb-3">
                 <div class="inventory-item-card {{ $inventoryItem->item->getRarityColor() }}-border" 
                      onclick="showItemDetail({{ $inventoryItem->id }})"
-                     style="height: 200px; cursor: pointer; transition: all 0.2s ease;"
+                     style="height: 240px; cursor: pointer; transition: all 0.2s ease;"
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.1)';"
                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
                     <div class="d-flex flex-column h-100">
@@ -71,12 +71,12 @@
                             <!-- Quick Action Button -->
                             <div class="mt-2">
                                 @if($inventoryItem->item->type === 'weapon' || $inventoryItem->item->type === 'armor' || $inventoryItem->item->type === 'accessory')
-                                    <button class="btn btn-sm btn-outline-primary w-100" style="font-size: 0.75rem; padding: 4px 8px;"
+                                    <button class="btn btn-sm btn-outline-primary w-100" style="font-size: 0.8rem; padding: 6px 12px; min-height: 28px;"
                                             onclick="event.stopPropagation(); equipItem({{ $inventoryItem->id }}, '{{ $inventoryItem->getEquipmentSlot() }}')">
                                         Equip
                                     </button>
                                 @elseif($inventoryItem->item->type === 'consumable')
-                                    <button class="btn btn-sm btn-outline-success w-100" style="font-size: 0.75rem; padding: 4px 8px;"
+                                    <button class="btn btn-sm btn-outline-success w-100" style="font-size: 0.8rem; padding: 6px 12px; min-height: 28px;"
                                             onclick="event.stopPropagation(); useItem({{ $inventoryItem->id }})">
                                         Use
                                     </button>

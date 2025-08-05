@@ -75,6 +75,16 @@ class GameController extends Controller
 
         // Get adventures with proper variable names
         $activeAdventures = $player->adventures()->where('status', 'active')->get();
+        
+        // Auto-complete adventures that have reached 100% progress
+        foreach ($activeAdventures as $adventure) {
+            if ($adventure->getCurrentProgress() >= 1.0) {
+                $adventure->markCompleted();
+            }
+        }
+        
+        // Refresh active adventures list after auto-completion
+        $activeAdventures = $player->adventures()->where('status', 'active')->get();
         $availableAdventures = $player->adventures()->where('status', 'available')->get();
         $currentWeather = $weatherService->getCurrentWeather($player);
 
@@ -317,6 +327,26 @@ class GameController extends Controller
         ];
         
         return view('game.achievements', $data);
+    }
+
+    public function skills()
+    {
+        $player = $this->getOrCreatePlayer();
+        $skillService = app(\App\Services\SkillService::class);
+        
+        // Get all player skills data
+        $skillData = $skillService->getPlayerSkills($player);
+        
+        // Get skill statistics
+        $skillStats = $skillService->getPlayerSkillStats($player);
+        
+        $data = [
+            'player' => $player,
+            'skillData' => $skillData,
+            'skillStats' => $skillStats
+        ];
+        
+        return view('game.skills', $data);
     }
 
     public function reputation()
@@ -2020,10 +2050,10 @@ class GameController extends Controller
     /**
      * Add item to player's inventory
      */
-    private function addItemToPlayerInventory($player, $item): void
+    private function addItemToPlayerInventory($player, $item, $quantity = 1): void
     {
         // Add item to the new PlayerItem inventory system
-        $player->addItemToPlayerInventory($item, 1);
+        $player->addItemToPlayerInventory($item, $quantity);
     }
 
     /**

@@ -68,9 +68,46 @@ class PlayerItem extends Model
             return $this->equipment_slot ?? 'ring_1'; // Default to ring_1
         }
 
+        // Handle special cases for artifact slots
+        if ($this->item->subtype === Item::SUBTYPE_ARTIFACT) {
+            // If already assigned to a specific slot, use it
+            if ($this->equipment_slot && in_array($this->equipment_slot, ['artifact_1', 'artifact_2'])) {
+                return $this->equipment_slot;
+            }
+            
+            // Smart slot assignment: use artifact_1 if free, otherwise artifact_2
+            $player = $this->player;
+            if ($player) {
+                $artifact1Occupied = $player->getEquippedPlayerItem('artifact_1');
+                if (!$artifact1Occupied) {
+                    return 'artifact_1';
+                } else {
+                    return 'artifact_2';
+                }
+            }
+            
+            return 'artifact_1'; // Fallback
+        }
+
         // Handle one-handed weapons
         if (in_array($this->item->subtype, [Item::SUBTYPE_SWORD, Item::SUBTYPE_AXE, Item::SUBTYPE_MACE, Item::SUBTYPE_DAGGER])) {
-            return $this->equipment_slot ?? 'weapon_1'; // Default to weapon_1
+            // If already assigned to a specific slot, use it
+            if ($this->equipment_slot && in_array($this->equipment_slot, ['weapon_1', 'weapon_2'])) {
+                return $this->equipment_slot;
+            }
+            
+            // Smart slot assignment: use weapon_1 if free, otherwise weapon_2
+            $player = $this->player;
+            if ($player) {
+                $weapon1Occupied = $player->getEquippedPlayerItem('weapon_1');
+                if (!$weapon1Occupied) {
+                    return 'weapon_1';
+                } else {
+                    return 'weapon_2';
+                }
+            }
+            
+            return 'weapon_1'; // Fallback
         }
 
         return $this->item->getEquipmentSlot();

@@ -593,6 +593,62 @@ class AchievementService
             'icon' => '🍀',
             'requirements' => ['critical_misses_single_combat' => 5],
             'hidden' => true
+        ],
+
+        // Skill-based Achievements
+        'skill_novice' => [
+            'name' => 'Skill Novice',
+            'description' => 'Learn your first skill',
+            'category' => 'character',
+            'points' => 25,
+            'icon' => '📖',
+            'requirements' => ['skills_learned' => 1],
+            'hidden' => false
+        ],
+        'skill_apprentice' => [
+            'name' => 'Skill Apprentice', 
+            'description' => 'Learn 5 different skills',
+            'category' => 'character',
+            'points' => 75,
+            'icon' => '🎓',
+            'requirements' => ['skills_learned' => 5],
+            'hidden' => false
+        ],
+        'skill_master' => [
+            'name' => 'Skill Master',
+            'description' => 'Learn 10 different skills',
+            'category' => 'character',
+            'points' => 150,
+            'icon' => '🧙‍♂️',
+            'requirements' => ['skills_learned' => 10],
+            'hidden' => false
+        ],
+        'first_max_skill' => [
+            'name' => 'Mastery Achieved',
+            'description' => 'Reach maximum level in any skill',
+            'category' => 'character',
+            'points' => 200,
+            'icon' => '⭐',
+            'requirements' => ['max_level_skills' => 1],
+            'hidden' => false
+        ],
+        'smithing_adept' => [
+            'name' => 'Smithing Adept',
+            'description' => 'Reach level 25 in Smithing',
+            'category' => 'crafting',
+            'points' => 100,
+            'icon' => '🔨',
+            'requirements' => ['smithing_level' => 25],
+            'hidden' => false
+        ],
+        'mining_expert' => [
+            'name' => 'Mining Expert',
+            'description' => 'Reach level 50 in Mining',
+            'category' => 'gathering',
+            'points' => 150,
+            'icon' => '⛏️',
+            'requirements' => ['mining_level' => 50],
+            'hidden' => false
         ]
     ];
 
@@ -716,8 +772,31 @@ class AchievementService
             'devoted_npcs' => $settledNPCs->where('relationship_score', '>=', 25)->count(),
             
             // Special stats (for hidden achievements)
-            'critical_misses_single_combat' => 0 // This would be tracked in real-time during combat
+            'critical_misses_single_combat' => 0, // This would be tracked in real-time during combat
+            
+            // Skill stats
+            'skills_learned' => $player->playerSkills()->count(),
+            'max_level_skills' => $player->playerSkills()->whereRaw('level >= (SELECT max_level FROM skills WHERE skills.id = player_skills.skill_id)')->count(),
+            'smithing_level' => $this->getSkillLevel($player, 'smithing'),
+            'mining_level' => $this->getSkillLevel($player, 'mining'),
+            'alchemy_level' => $this->getSkillLevel($player, 'alchemy'),
+            'herbalism_level' => $this->getSkillLevel($player, 'herbalism'),
+            'toughness_level' => $this->getSkillLevel($player, 'toughness'),
+            'athletics_level' => $this->getSkillLevel($player, 'athletics'),
+            'active_combat_skills' => $player->playerSkills()->whereHas('skill', function($query) {
+                $query->where('type', 'active')->where('category', 'combat');
+            })->count()
         ];
+    }
+
+    private function getSkillLevel(Player $player, string $skillSlug): int
+    {
+        $playerSkill = $player->playerSkills()
+            ->whereHas('skill', function($query) use ($skillSlug) {
+                $query->where('slug', $skillSlug);
+            })->first();
+            
+        return $playerSkill ? $playerSkill->level : 0;
     }
 
     private function getCombatStats(Player $player, string $statType): int

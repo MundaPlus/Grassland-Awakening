@@ -168,7 +168,13 @@
                 </div>
                 <div class="card-body enemies-container">
                     @if(isset($combat_data['enemies']))
-                        @foreach($combat_data['enemies'] as $enemyId => $enemyData)
+                        @php
+                            // Sort enemies so live ones appear on top
+                            $sortedEnemies = collect($combat_data['enemies'])->sortBy(function($enemy) {
+                                return $enemy['status'] === 'alive' ? 0 : 1;
+                            });
+                        @endphp
+                        @foreach($sortedEnemies as $enemyId => $enemyData)
                             <div class="enemy-card mb-3 {{ $enemyData['status'] === 'dead' ? 'enemy-dead' : '' }} {{ $combat_data['selected_target'] === $enemyId ? 'enemy-selected' : '' }}" 
                                  data-enemy-id="{{ $enemyId }}" 
                                  onclick="selectTarget('{{ $enemyId }}')">

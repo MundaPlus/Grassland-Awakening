@@ -100,7 +100,7 @@ class Item extends Model
             self::SUBTYPE_GLOVES => 'gloves',
             self::SUBTYPE_NECKLACE => 'neck',
             self::SUBTYPE_RING => null, // Special handling needed
-            self::SUBTYPE_ARTIFACT => 'artifact',
+            self::SUBTYPE_ARTIFACT => null, // Special handling needed for artifact slots
             self::SUBTYPE_SHIELD => 'shield',
             self::SUBTYPE_BOW => 'bow',
             self::SUBTYPE_WAND => 'wand',

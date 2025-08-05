@@ -843,6 +843,24 @@ class Player extends Model
                     ->withTimestamps();
     }
 
+    // Skill System Relations
+    public function playerSkills(): HasMany
+    {
+        return $this->hasMany(PlayerSkill::class);
+    }
+
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'player_skills')
+                    ->withPivot(['level', 'experience', 'last_used', 'times_used'])
+                    ->withTimestamps();
+    }
+
+    public function skillCooldowns(): HasMany
+    {
+        return $this->hasMany(PlayerSkillCooldown::class);
+    }
+
     public function learnRecipe(CraftingRecipe $recipe, string $discoveryMethod = null): bool
     {
         if ($this->knownRecipes()->where('recipe_id', $recipe->id)->exists()) {
