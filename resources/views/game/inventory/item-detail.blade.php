@@ -1,45 +1,22 @@
 <div class="row">
     <div class="col-md-4">
-        <div class="item-icon-large bg-{{ $inventoryItem->item->getRarityColor() }} text-center p-4 rounded">
-            @switch($inventoryItem->item->type)
-                @case('weapon')
-                    @switch($inventoryItem->item->subtype)
-                        @case('sword') <i class="fas fa-sword fa-3x"></i> @break
-                        @case('axe') <i class="fas fa-axe fa-3x"></i> @break
-                        @case('bow') <i class="fas fa-bow-arrow fa-3x"></i> @break
-                        @case('staff') <i class="fas fa-magic fa-3x"></i> @break
-                        @case('wand') <i class="fas fa-wand-magic fa-3x"></i> @break
-                        @default <i class="fas fa-sword fa-3x"></i>
-                    @endswitch
-                @break
-                @case('armor')
-                    @switch($inventoryItem->item->subtype)
-                        @case('helmet') <i class="fas fa-helmet-safety fa-3x"></i> @break
-                        @case('chest') <i class="fas fa-vest fa-3x"></i> @break
-                        @case('pants') <i class="fas fa-socks fa-3x"></i> @break
-                        @case('boots') <i class="fas fa-boot fa-3x"></i> @break
-                        @case('gloves') <i class="fas fa-mitten fa-3x"></i> @break
-                        @case('shield') <i class="fas fa-shield fa-3x"></i> @break
-                        @default <i class="fas fa-shield fa-3x"></i>
-                    @endswitch
-                @break
-                @case('accessory')
-                    @switch($inventoryItem->item->subtype)
-                        @case('ring') <i class="fas fa-ring fa-3x"></i> @break
-                        @case('necklace') <i class="fas fa-gem fa-3x"></i> @break
-                        @case('artifact') <i class="fas fa-bolt fa-3x"></i> @break
-                        @default <i class="fas fa-ring fa-3x"></i>
-                    @endswitch
-                @break
-                @case('consumable') <i class="fas fa-flask fa-3x"></i> @break
-                @case('crafting_material') <i class="fas fa-hammer fa-3x"></i> @break
-                @case('quest_item') <i class="fas fa-scroll fa-3x"></i> @break
-                @default <i class="fas fa-box fa-3x"></i>
-            @endswitch
+        <div class="item-icon-large border-{{ $inventoryItem->item->getRarityColor() }} text-center p-3 rounded" style="border: 3px solid; background: rgba(255,255,255,0.1);">
+            <img src="{{ $inventoryItem->item->getImagePath() }}" 
+                 alt="{{ $inventoryItem->item->name }}" 
+                 style="width: 120px; height: 120px; object-fit: contain; border-radius: 8px;">
         </div>
     </div>
     <div class="col-md-8">
-        <h4 class="rarity-{{ $inventoryItem->item->rarity }}">{{ $inventoryItem->item->name }}</h4>
+        <h4 class="rarity-{{ $inventoryItem->item->rarity }}">
+            @if(method_exists($inventoryItem, 'getDisplayName'))
+                {{ $inventoryItem->getDisplayName() }}
+                @if(method_exists($inventoryItem, 'hasAffixes') && $inventoryItem->hasAffixes())
+                    <small class="text-warning">✨</small>
+                @endif
+            @else
+                {{ $inventoryItem->item->name }}
+            @endif
+        </h4>
         <p class="text-muted mb-2">{{ ucfirst($inventoryItem->item->type) }} - {{ ucfirst($inventoryItem->item->subtype) }}</p>
         <p class="rarity-{{ $inventoryItem->item->rarity }} fw-bold">{{ ucfirst($inventoryItem->item->rarity) }}</p>
         

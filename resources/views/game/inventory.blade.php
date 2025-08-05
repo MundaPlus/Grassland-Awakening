@@ -241,6 +241,22 @@
     cursor: pointer;
 }
 
+.inventory-item-card {
+    background: var(--bs-body-bg, #fff);
+    border: 2px solid var(--bs-border-color, #dee2e6);
+    border-radius: 12px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.dark .inventory-item-card {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-high-contrast);
+}
+
 .inventory-item:hover {
     border-color: #adb5bd;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);

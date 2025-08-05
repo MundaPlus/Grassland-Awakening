@@ -423,6 +423,92 @@
 </div>
 @endforeach
 
+<!-- Completed Adventure Preview Modals -->
+@foreach($completedAdventures as $adventure)
+<div class="modal fade" id="adventurePreviewModal{{ $adventure->id }}" tabindex="-1" aria-labelledby="adventurePreviewModal{{ $adventure->id }}Label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adventurePreviewModal{{ $adventure->id }}Label">{{ $adventure->title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>Adventure Description</h6>
+                        <p>{{ $adventure->description }}</p>
+                        
+                        <h6>Adventure Results</h6>
+                        <div class="result-summary">
+                            @if($adventure->status === 'completed')
+                                <div class="alert alert-success">
+                                    <i class="fas fa-trophy"></i> <strong>Adventure Completed Successfully!</strong>
+                                    @if($adventure->completed_at)
+                                        <br><small>Completed on {{ $adventure->completed_at->format('M j, Y \a\t H:i') }}</small>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-times-circle"></i> <strong>Adventure Failed</strong>
+                                    @if($adventure->completed_at)
+                                        <br><small>Failed on {{ $adventure->completed_at->format('M j, Y \a\t H:i') }}</small>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+                        
+                        @if($adventure->status === 'completed')
+                            <h6>Adventure Statistics</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Nodes Completed:</strong> {{ count($adventure->completed_nodes ?? []) }}</li>
+                                <li><strong>Progress:</strong> {{ round($adventure->getCurrentProgress() * 100) }}%</li>
+                                @if($adventure->currency_earned > 0)
+                                <li><strong>Gold Earned:</strong> {{ $adventure->currency_earned }}</li>
+                                @endif
+                                @if($adventure->collected_loot)
+                                <li><strong>Items Found:</strong> {{ count($adventure->collected_loot) }}</li>
+                                @endif
+                            </ul>
+                        @endif
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Adventure Details</h6>
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td>Difficulty</td>
+                                    <td><span class="badge bg-{{ $adventure->difficulty === 'easy' ? 'success' : ($adventure->difficulty === 'normal' ? 'warning' : ($adventure->difficulty === 'hard' ? 'danger' : 'dark')) }}">{{ ucfirst($adventure->difficulty) }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Road</td>
+                                    <td>{{ ucfirst(str_replace('_', ' ', $adventure->road)) }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Status</td>
+                                    <td>
+                                        @if($adventure->status === 'completed')
+                                            <span class="badge bg-success">Completed</span>
+                                        @else
+                                            <span class="badge bg-danger">Failed</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Seed</td>
+                                    <td><code class="small">{{ $adventure->seed }}</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 
 <script>
 function startAdventure(adventureId) {

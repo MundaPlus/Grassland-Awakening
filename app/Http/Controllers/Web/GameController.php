@@ -83,7 +83,7 @@ class GameController extends Controller
             'activeAdventures' => $activeAdventures,
             'availableAdventures' => $availableAdventures,
             'weatherEffects' => $currentWeather['effects'] ?? null,
-            'completedAdventures' => $player->adventures()->whereIn('status', ['completed', 'failed'])->latest()->take(5)->get()
+            'completedAdventures' => $player->adventures()->whereIn('status', ['completed', 'failed'])->latest()->take(3)->get()
         ];
 
         return view('game.adventures', $data);
@@ -307,7 +307,8 @@ class GameController extends Controller
                 'int' => $player->getEquipmentStatModifier('int'),
                 'wis' => $player->getEquipmentStatModifier('wis'),
                 'cha' => $player->getEquipmentStatModifier('cha'),
-                'weapon_damage' => $player->getWeaponDamageBonus()
+                'weapon_damage' => $player->getWeaponDamageBonus(),
+                'ac' => $player->getEquipmentACBonus()
             ],
             'totalAC' => $player->getTotalAC(),
             'baseAC' => $player->ac,
@@ -542,7 +543,12 @@ class GameController extends Controller
     public function getInventoryItemDetail($id)
     {
         $player = $this->getOrCreatePlayer();
-        $inventoryItem = $player->inventory()->with('item')->findOrFail($id);
+        
+        // Try to find the item in both inventory systems
+        $inventoryItem = $player->inventory()->with('item')->find($id);
+        if (!$inventoryItem) {
+            $inventoryItem = $player->playerItems()->with('item')->findOrFail($id);
+        }
         
         $html = view('game.inventory.item-detail', ['inventoryItem' => $inventoryItem])->render();
         $actions = view('game.inventory.item-actions', ['inventoryItem' => $inventoryItem])->render();
@@ -921,6 +927,14 @@ class GameController extends Controller
                         if ($item) {
                             $this->addItemToPlayerInventory($player, $item);
                             $message .= " You looted: {$item->name}!";
+                        }
+                    }
+                    
+                    // Try to discover recipe from this combat victory
+                    if ($nodeDetails) {
+                        $recipeDiscovery = $this->tryDiscoverRecipeFromNode($adventure, $nodeDetails);
+                        if ($recipeDiscovery) {
+                            $message .= " " . $recipeDiscovery['message'];
                         }
                     }
                     
@@ -1425,6 +1439,12 @@ class GameController extends Controller
             }
         }
         
+        // Try to discover recipe from this treasure node
+        $recipeDiscovery = $this->tryDiscoverRecipeFromNode($adventure, $nodeDetails);
+        if ($recipeDiscovery) {
+            $message .= " " . $recipeDiscovery['message'];
+        }
+        
         $adventure->addCompletedNode($nodeDetails['id']);
 
         // Move to next accessible node
@@ -1480,6 +1500,12 @@ class GameController extends Controller
                 $player->save();
                 $message .= "You take {$damage} damage.";
             }
+        }
+
+        // Try to discover recipe from this event node
+        $recipeDiscovery = $this->tryDiscoverRecipeFromNode($adventure, $nodeDetails);
+        if ($recipeDiscovery) {
+            $message .= " " . $recipeDiscovery['message'];
         }
 
         $adventure->addCompletedNode($nodeDetails['id']);
@@ -1583,6 +1609,12 @@ class GameController extends Controller
                     $message .= " Failure. " . $this->processSkillCheckFailure($player, $adventure, $skillCheck);
                 }
             }
+        }
+        
+        // Try to discover recipe from this NPC encounter
+        $recipeDiscovery = $this->tryDiscoverRecipeFromNode($adventure, $nodeDetails);
+        if ($recipeDiscovery) {
+            $message .= " " . $recipeDiscovery['message'];
         }
         
         // Complete the node
@@ -1791,8 +1823,46 @@ class GameController extends Controller
         $completedLevels = $adventure->getCompletedLevelsCount();
 
         if ($completedLevels >= $totalLevels) {
+            // Discover recipes from completed adventure
+            $recipeDiscoveryService = app(\App\Services\RecipeDiscoveryService::class);
+            $discoveredRecipes = $recipeDiscoveryService->discoverRecipesFromAdventure($adventure->player, $adventure);
+            
+            // Store discovered recipes in session for display
+            if (!empty($discoveredRecipes)) {
+                session(['discovered_recipes' => $discoveredRecipes]);
+            }
+            
             $adventure->markCompleted();
         }
+    }
+
+    /**
+     * Try to discover a recipe from completing a node
+     */
+    private function tryDiscoverRecipeFromNode($adventure, $nodeDetails): ?array
+    {
+        if (!$nodeDetails || !isset($nodeDetails['type'])) {
+            return null;
+        }
+
+        $recipeDiscoveryService = app(\App\Services\RecipeDiscoveryService::class);
+        $nodeLevel = intval(explode('-', $nodeDetails['id'])[0]);
+        
+        $discoveredRecipe = $recipeDiscoveryService->tryDiscoverRecipeFromNode(
+            $adventure->player, 
+            $adventure, 
+            $nodeDetails['type'], 
+            $nodeLevel
+        );
+
+        if ($discoveredRecipe) {
+            return [
+                'recipe' => $discoveredRecipe,
+                'message' => "You discovered a new crafting recipe: {$discoveredRecipe->name}!"
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -1928,9 +1998,11 @@ class GameController extends Controller
             if ($slot) {
                 // Create a fake Equipment object with the necessary properties
                 $fakeEquipment = new class {
+                    public $id;
                     public $item;
                     public $durability;
                     public $max_durability;
+                    public $slot;
                     
                     public function getSlotDisplayName() {
                         return ucfirst(str_replace('_', ' ', $this->slot ?? ''));
@@ -1954,6 +2026,7 @@ class GameController extends Controller
                     }
                 };
                 
+                $fakeEquipment->id = $playerItem->id;
                 $fakeEquipment->item = $playerItem->item;
                 $fakeEquipment->durability = $playerItem->current_durability ?? $playerItem->item->max_durability ?? 100;
                 $fakeEquipment->max_durability = $playerItem->item->max_durability ?? 100;

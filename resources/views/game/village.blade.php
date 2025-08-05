@@ -27,6 +27,27 @@
         </div>
     </div>
 
+    <!-- Recipe Discovery Notifications -->
+    @if(session('discovered_recipes'))
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <h5 class="alert-heading"><i class="fas fa-scroll"></i> New Recipes Discovered!</h5>
+                <p class="mb-2">Your adventures have yielded new crafting knowledge:</p>
+                <ul class="mb-0">
+                    @foreach(session('discovered_recipes') as $recipe)
+                    <li><strong>{{ $recipe->name }}</strong> - {{ $recipe->description }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    @php
+        session()->forget('discovered_recipes');
+    @endphp
+    @endif
+
     <!-- Village Specializations -->
     @if($village->specializations->isNotEmpty())
     <div class="row mb-4">

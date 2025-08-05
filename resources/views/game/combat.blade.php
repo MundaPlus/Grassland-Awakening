@@ -173,6 +173,23 @@
                                  data-enemy-id="{{ $enemyId }}" 
                                  onclick="selectTarget('{{ $enemyId }}')">
                                 <div class="d-flex align-items-center mb-2">
+                                    <div class="me-3">
+                                        @php
+                                            // Map enemy names to images
+                                            $enemyImage = 'goblin.png'; // default
+                                            $enemyName = strtolower($enemyData['name'] ?? 'goblin');
+                                            if (str_contains($enemyName, 'goblin')) $enemyImage = 'goblin.png';
+                                            elseif (str_contains($enemyName, 'orc') || str_contains($enemyName, 'ork')) $enemyImage = 'ork.png';
+                                            elseif (str_contains($enemyName, 'skeleton')) $enemyImage = 'skeleton.png';
+                                            elseif (str_contains($enemyName, 'slime')) $enemyImage = 'slime.png';
+                                            elseif (str_contains($enemyName, 'wolf')) $enemyImage = 'wolf.png';
+                                            elseif (str_contains($enemyName, 'bandit')) $enemyImage = 'bandit.png';
+                                            elseif (str_contains($enemyName, 'boss') || str_contains($enemyName, 'lord') || str_contains($enemyName, 'king') || str_contains($enemyName, 'demon')) $enemyImage = 'boss_1.png';
+                                        @endphp
+                                        <img src="{{ asset('img/enemies/' . $enemyImage) }}" 
+                                             alt="{{ $enemyData['name'] }}"
+                                             style="width: 48px; height: 48px; object-fit: contain; border-radius: 8px; {{ $enemyData['status'] === 'dead' ? 'filter: grayscale(100%);' : '' }}">
+                                    </div>
                                     <div class="enemy-name flex-grow-1">
                                         <strong>{{ $enemyData['name'] }}</strong>
                                         <small class="text-muted d-block">{{ $enemyData['type'] ?? 'Monster' }}</small>
@@ -226,6 +243,23 @@
                     @else
                         <!-- Single Enemy (backward compatibility) -->
                         <div class="row mb-3">
+                            <div class="col-12 text-center mb-3">
+                                @php
+                                    // Map enemy names to images
+                                    $enemyImage = 'goblin.png'; // default
+                                    $enemyName = strtolower($combat_data['enemy']['name'] ?? $enemy['name'] ?? 'goblin');
+                                    if (str_contains($enemyName, 'goblin')) $enemyImage = 'goblin.png';
+                                    elseif (str_contains($enemyName, 'orc') || str_contains($enemyName, 'ork')) $enemyImage = 'ork.png';
+                                    elseif (str_contains($enemyName, 'skeleton')) $enemyImage = 'skeleton.png';
+                                    elseif (str_contains($enemyName, 'slime')) $enemyImage = 'slime.png';
+                                    elseif (str_contains($enemyName, 'wolf')) $enemyImage = 'wolf.png';
+                                    elseif (str_contains($enemyName, 'bandit')) $enemyImage = 'bandit.png';
+                                    elseif (str_contains($enemyName, 'boss') || str_contains($enemyName, 'lord') || str_contains($enemyName, 'king') || str_contains($enemyName, 'demon')) $enemyImage = 'boss_1.png';
+                                @endphp
+                                <img src="{{ asset('img/enemies/' . $enemyImage) }}" 
+                                     alt="{{ $combat_data['enemy']['name'] ?? $enemy['name'] ?? 'Enemy' }}"
+                                     style="width: 80px; height: 80px; object-fit: contain; border-radius: 12px; border: 3px solid #dc3545;">
+                            </div>
                             <div class="col-6">
                                 <div class="stat-display">
                                     <div class="small text-muted">Health</div>

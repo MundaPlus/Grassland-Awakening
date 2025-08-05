@@ -235,7 +235,7 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="stat-card">
-                                <div class="h4 text-info" aria-label="Completion percentage {{ round(($unlockedCount / $totalCount) * 100) }}%">{{ round(($unlockedCount / $totalCount) * 100) }}%</div>
+                                <div class="h4 text-info" aria-label="Completion percentage {{ $totalCount > 0 ? round(($unlockedCount / $totalCount) * 100) : 0 }}%">{{ $totalCount > 0 ? round(($unlockedCount / $totalCount) * 100) : 0 }}%</div>
                                 <div class="text-muted">Completion</div>
                             </div>
                         </div>

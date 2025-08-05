@@ -1,144 +1,85 @@
 @if($items->count() > 0)
     <div class="row">
         @foreach($items as $inventoryItem)
-            <div class="col-md-6 col-lg-4 mb-3">
-                <div class="inventory-item {{ $inventoryItem->item->getRarityColor() }}-border" 
-                     onclick="showItemDetail({{ $inventoryItem->id }})">
-                    <div class="d-flex align-items-start">
-                        <div class="item-icon bg-{{ $inventoryItem->item->getRarityColor() }}">
-                            @switch($inventoryItem->item->type)
-                                @case('weapon')
-                                    @switch($inventoryItem->item->subtype)
-                                        @case('sword') ⚔️ @break
-                                        @case('axe') 🪓 @break
-                                        @case('bow') 🏹 @break
-                                        @case('staff') 🔮 @break
-                                        @case('wand') ✨ @break
-                                        @default ⚔️
-                                    @endswitch
-                                @break
-                                @case('armor')
-                                    @switch($inventoryItem->item->subtype)
-                                        @case('helmet') ⛑️ @break
-                                        @case('chest') 🦺 @break
-                                        @case('pants') 👖 @break
-                                        @case('boots') 👢 @break
-                                        @case('gloves') 🧤 @break
-                                        @case('shield') 🛡️ @break
-                                        @default 🛡️
-                                    @endswitch
-                                @break
-                                @case('accessory')
-                                    @switch($inventoryItem->item->subtype)
-                                        @case('ring') 💍 @break
-                                        @case('necklace') 📿 @break
-                                        @case('artifact') ⚡ @break
-                                        @default 💍
-                                    @endswitch
-                                @break
-                                @case('consumable') 🧪 @break
-                                @case('crafting_material') ⚒️ @break
-                                @case('quest_item') 📜 @break
-                                @default 📦
-                            @endswitch
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 class="mb-1 item-name rarity-{{ $inventoryItem->item->rarity }}">
-                                        {{ $inventoryItem->getDisplayName() }}
-                                        @if($inventoryItem->hasAffixes())
-                                            <small class="text-muted">✨</small>
-                                        @endif
-                                    </h6>
-                                    <small class="text-muted">{{ ucfirst($inventoryItem->item->subtype) }}</small>
-                                </div>
-                                @if($inventoryItem->quantity > 1)
-                                    <span class="badge bg-info">x{{ $inventoryItem->quantity }}</span>
-                                @endif
+            <div class="col-md-4 col-lg-3 mb-3">
+                <div class="inventory-item-card {{ $inventoryItem->item->getRarityColor() }}-border" 
+                     onclick="showItemDetail({{ $inventoryItem->id }})"
+                     style="height: 200px; cursor: pointer; transition: all 0.2s ease;"
+                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.1)';"
+                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                    <div class="d-flex flex-column h-100">
+                        <div class="text-center mb-2">
+                            <div class="item-icon-small border-{{ $inventoryItem->item->getRarityColor() }} mx-auto" style="width: 50px; height: 50px; border: 2px solid; border-radius: 8px; padding: 2px; background: rgba(255,255,255,0.1);">
+                                <img src="{{ $inventoryItem->item->getImagePath() }}" 
+                                     alt="{{ $inventoryItem->item->name }}" 
+                                     style="width: 100%; height: 100%; object-fit: contain; border-radius: 6px;">
                             </div>
+                        </div>
+                        <div class="flex-grow-1 text-center">
+                            <h6 class="mb-1 item-name rarity-{{ $inventoryItem->item->rarity }}" style="font-size: 0.9rem; line-height: 1.2;">
+                                {{ $inventoryItem->getDisplayName() }}
+                                @if($inventoryItem->hasAffixes())
+                                    <small class="text-warning">✨</small>
+                                @endif
+                            </h6>
+                            <small class="text-muted d-block mb-2">{{ ucfirst($inventoryItem->item->subtype) }}</small>
+                            @if($inventoryItem->quantity > 1)
+                                <span class="badge bg-info small">x{{ $inventoryItem->quantity }}</span>
+                            @endif
+                        </div>
+                        
+                        <!-- Compact Item Stats -->
+                        <div class="mt-auto pt-2 border-top">
+                            @if($inventoryItem->item->damage_dice)
+                                <small class="text-primary d-block" style="font-size: 0.75rem;">
+                                    🗡️ {{ $inventoryItem->item->damage_dice }}@if($inventoryItem->item->damage_bonus > 0)+{{ $inventoryItem->item->damage_bonus }}@endif
+                                </small>
+                            @endif
                             
-                            <!-- Item Stats Preview -->
-                            <div class="item-stats mt-2">
-                                @if($inventoryItem->item->damage_dice)
-                                    <small class="text-primary">
-                                        🗡️ {{ $inventoryItem->item->damage_dice }}
-                                        @if($inventoryItem->item->damage_bonus > 0)+{{ $inventoryItem->item->damage_bonus }}@endif
-                                    </small>
-                                @endif
-                                
-                                @if($inventoryItem->item->ac_bonus > 0)
-                                    <small class="text-success">
-                                        🛡️ +{{ $inventoryItem->getEffectiveACBonus() }} AC
-                                    </small>
-                                @endif
-                                
-                                @php
-                                    $allStatModifiers = [];
-                                    if ($inventoryItem->item->stats_modifiers) {
-                                        $allStatModifiers = $inventoryItem->item->stats_modifiers;
-                                    }
-                                    if ($inventoryItem->affix_stat_modifiers) {
-                                        foreach ($inventoryItem->affix_stat_modifiers as $stat => $bonus) {
-                                            if (!isset($allStatModifiers[$stat])) {
-                                                $allStatModifiers[$stat] = 0;
-                                            }
+                            @if($inventoryItem->item->ac_bonus > 0)
+                                <small class="text-success d-block" style="font-size: 0.75rem;">
+                                    🛡️ +{{ $inventoryItem->getEffectiveACBonus() }} AC
+                                </small>
+                            @endif
+                            
+                            @php
+                                $allStatModifiers = [];
+                                if ($inventoryItem->item->stats_modifiers) {
+                                    $allStatModifiers = $inventoryItem->item->stats_modifiers;
+                                }
+                                if ($inventoryItem->affix_stat_modifiers) {
+                                    foreach ($inventoryItem->affix_stat_modifiers as $stat => $bonus) {
+                                        if (!isset($allStatModifiers[$stat])) {
+                                            $allStatModifiers[$stat] = 0;
                                         }
                                     }
-                                @endphp
-                                @if($allStatModifiers)
-                                    <div class="stat-modifiers">
-                                        @foreach($allStatModifiers as $stat => $bonus)
-                                            @php $effectiveBonus = $inventoryItem->getEffectiveStatModifier($stat); @endphp
-                                            @if($effectiveBonus != 0)
-                                                <small class="text-{{ $effectiveBonus > 0 ? 'success' : 'danger' }} me-2">
-                                                    {{ strtoupper($stat) }} {{ $effectiveBonus > 0 ? '+' : '' }}{{ $effectiveBonus }}
-                                                </small>
-                                            @endif
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                            
-                            <!-- Durability Bar -->
-                            @if($inventoryItem->isDamaged())
-                                <div class="durability-bar mt-2">
-                                    <div class="progress" style="height: 4px;">
-                                        <div class="progress-bar bg-{{ $inventoryItem->getDurabilityPercentage() > 50 ? 'success' : ($inventoryItem->getDurabilityPercentage() > 25 ? 'warning' : 'danger') }}" 
-                                             style="width: {{ $inventoryItem->getDurabilityPercentage() }}%"
-                                             title="Durability: {{ $inventoryItem->getDurabilityPercentage() }}%"></div>
-                                    </div>
-                                    <small class="text-muted">{{ $inventoryItem->getDurabilityPercentage() }}% condition</small>
-                                </div>
+                                }
+                                $displayedStats = 0;
+                            @endphp
+                            @if($allStatModifiers)
+                                @foreach($allStatModifiers as $stat => $bonus)
+                                    @php $effectiveBonus = $inventoryItem->getEffectiveStatModifier($stat); @endphp
+                                    @if($effectiveBonus != 0 && $displayedStats < 2)
+                                        <small class="text-{{ $effectiveBonus > 0 ? 'success' : 'danger' }} d-block" style="font-size: 0.75rem;">
+                                            {{ strtoupper($stat) }} {{ $effectiveBonus > 0 ? '+' : '' }}{{ $effectiveBonus }}
+                                        </small>
+                                        @php $displayedStats++; @endphp
+                                    @endif
+                                @endforeach
                             @endif
                             
-                            <!-- Item Value -->
-                            @if($inventoryItem->item->value > 0)
-                                <div class="item-value mt-1">
-                                    <small class="text-warning">💰 {{ number_format($inventoryItem->item->value) }} gold</small>
-                                </div>
-                            @endif
-                            
-                            <!-- Quick Actions -->
-                            <div class="item-actions mt-2">
+                            <!-- Quick Action Button -->
+                            <div class="mt-2">
                                 @if($inventoryItem->item->type === 'weapon' || $inventoryItem->item->type === 'armor' || $inventoryItem->item->type === 'accessory')
-                                    <button class="btn btn-sm btn-outline-primary me-1" 
+                                    <button class="btn btn-sm btn-outline-primary w-100" style="font-size: 0.75rem; padding: 4px 8px;"
                                             onclick="event.stopPropagation(); equipItem({{ $inventoryItem->id }}, '{{ $inventoryItem->getEquipmentSlot() }}')">
                                         Equip
                                     </button>
-                                @endif
-                                
-                                @if($inventoryItem->item->type === 'consumable')
-                                    <button class="btn btn-sm btn-outline-success me-1" 
+                                @elseif($inventoryItem->item->type === 'consumable')
+                                    <button class="btn btn-sm btn-outline-success w-100" style="font-size: 0.75rem; padding: 4px 8px;"
                                             onclick="event.stopPropagation(); useItem({{ $inventoryItem->id }})">
                                         Use
                                     </button>
-                                @endif
-                                
-                                @if($inventoryItem->item->level_requirement > 0)
-                                    <small class="text-muted">
-                                        Req. Level {{ $inventoryItem->item->level_requirement }}
-                                    </small>
                                 @endif
                             </div>
                         </div>

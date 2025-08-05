@@ -612,7 +612,6 @@ function challengeBoss(nodeId) {
             // Fallback to direct navigation
             window.location.href = `/game/adventure/{{ $adventure->id }}/combat?node=${nodeId}&boss=true`;
         });
-    }
 }
 
 function exploreNode(nodeId) {

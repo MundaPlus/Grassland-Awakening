@@ -185,4 +185,68 @@ class Item extends Model
     {
         $this->attributes['base_value'] = $value;
     }
+
+    /**
+     * Get the image path for this item based on type and subtype
+     */
+    public function getImagePath(): string
+    {
+        // Define mapping from item types/subtypes to image files
+        $imageMap = [
+            // Weapons
+            'weapon' => [
+                'sword' => 'sword.png',
+                'axe' => 'axe.png',
+                'default' => 'sword.png'
+            ],
+            // Armor
+            'armor' => [
+                'helmet' => 'helm.png',
+                'chest' => 'chest.png',
+                'pants' => 'pants.png',
+                'boots' => 'boots.png',
+                'gloves' => 'gloves.png',
+                'shield' => 'shield.png',
+                'default' => 'chest.png'
+            ],
+            // Accessories
+            'accessory' => [
+                'ring' => 'ring_1.png',
+                'necklace' => 'necklace_1.png',
+                'artifact' => 'trinket_1.png',
+                'default' => 'ring_1.png'
+            ],
+            // Consumables
+            'consumable' => [
+                'potion' => 'potion_1.png',
+                'scroll' => 'scroll.png',
+                'default' => 'potion_1.png'
+            ],
+            // Materials
+            'material' => [
+                'wood' => 'wood.png',
+                'ore' => 'ore.png',
+                'default' => 'ore.png'
+            ],
+            'crafting_material' => [
+                'wood' => 'wood.png',
+                'ore' => 'ore.png',
+                'default' => 'ore.png'
+            ]
+        ];
+
+        $type = $this->type ?? 'misc';
+        $subtype = $this->subtype ?? 'default';
+        
+        // Get the appropriate image filename
+        if (isset($imageMap[$type][$subtype])) {
+            $filename = $imageMap[$type][$subtype];
+        } elseif (isset($imageMap[$type]['default'])) {
+            $filename = $imageMap[$type]['default'];
+        } else {
+            $filename = 'barrel.png'; // Fallback for misc items
+        }
+
+        return asset('img/items/' . $filename);
+    }
 }

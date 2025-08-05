@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="ltr">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="ltr" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -57,11 +57,24 @@
             --bg-secondary: #1f2937;
             --bg-accent: #374151;
             --border-color: #4b5563;
+            
+            /* Bootstrap CSS variables override */
+            --bs-body-bg: #111827 !important;
+            --bs-body-color: #f9fafb !important;
+            --bs-border-color: #4b5563 !important;
+            --bs-secondary-bg: #1f2937 !important;
+            --bs-tertiary-bg: #374151 !important;
         }
         
+        html.dark,
         .dark body {
-            background-color: var(--bg-primary);
+            background-color: var(--bg-primary) !important;
             color: var(--text-high-contrast);
+        }
+        
+        .dark .container,
+        .dark .container-fluid {
+            background-color: transparent;
         }
         
         .dark .navbar {
@@ -96,6 +109,59 @@
         .dark .btn-outline-secondary:hover {
             background-color: var(--bg-accent);
             color: var(--text-high-contrast);
+        }
+        
+        /* Additional dark mode fixes */
+        .dark .nav-tabs .nav-link.active {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-high-contrast) !important;
+        }
+        
+        .dark .nav-tabs .nav-link {
+            color: var(--text-medium-contrast) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        .dark .tab-content {
+            background-color: var(--bg-secondary);
+            color: var(--text-high-contrast);
+        }
+        
+        .dark .modal-content {
+            background-color: var(--bg-secondary);
+            color: var(--text-high-contrast);
+            border-color: var(--border-color);
+        }
+        
+        .dark .modal-header {
+            background-color: var(--bg-accent);
+            border-color: var(--border-color);
+        }
+        
+        .dark .form-control {
+            background-color: var(--bg-accent);
+            border-color: var(--border-color);
+            color: var(--text-high-contrast);
+        }
+        
+        .dark .form-control:focus {
+            background-color: var(--bg-accent);
+            border-color: var(--primary-color);
+            color: var(--text-high-contrast);
+        }
+        
+        /* Force dark background for common Bootstrap components */
+        .dark .card-body,
+        .dark .card-footer,
+        .dark .list-group-item {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-high-contrast) !important;
+        }
+        
+        .dark .main,
+        .dark main {
+            background-color: var(--bg-primary) !important;
         }
         
         /* Reduced motion support */
@@ -495,8 +561,10 @@
                 (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
             ) {
                 document.documentElement.classList.add('dark');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
             } else {
                 document.documentElement.classList.remove('dark');
+                document.documentElement.setAttribute('data-bs-theme', 'light');
             }
         }
 
@@ -528,9 +596,11 @@
                 // Toggle theme
                 if (document.documentElement.classList.contains('dark')) {
                     document.documentElement.classList.remove('dark');
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
                     localStorage.setItem('color-theme', 'light');
                 } else {
                     document.documentElement.classList.add('dark');
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
                     localStorage.setItem('color-theme', 'dark');
                 }
                 updateThemeToggleIcons();

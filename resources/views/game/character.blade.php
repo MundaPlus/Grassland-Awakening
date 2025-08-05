@@ -125,25 +125,32 @@
                         
                         <!-- Regular equipment slots -->
                         @foreach($borderSlots as $slot => $config)
-                            @if(in_array($slot, array_merge($armorSlots ?? [], $weaponSlots ?? [], $accessorySlots ?? [])))
-                                <div class="equipment-slot-border" 
-                                     data-slot="{{ $slot }}" 
-                                     style="position: absolute; {{ $config[0] }} width: 90px; height: 90px; z-index: 10;">
-                                    @if(isset($equipment[$slot]) && $equipment[$slot])
-                                        <div class="equipment-item-border {{ $equipment[$slot]->item->getRarityColor() }}" 
-                                             data-bs-toggle="tooltip" 
-                                             data-bs-html="true" 
-                                             data-bs-placement="top"
-                                             title="@include('game.partials.item-tooltip', ['item' => $equipment[$slot]])">
-                                            <i class="{{ $config[1] }}"></i>
-                                        </div>
-                                    @else
-                                        <div class="empty-equipment-slot-border" title="{{ $config[2] }}">
-                                            <i class="{{ $config[1] }}"></i>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endif
+                            <div class="equipment-slot-border" 
+                                 data-slot="{{ $slot }}" 
+                                 style="position: absolute; {{ $config[0] }} width: 90px; height: 90px; z-index: 10;">
+                                @if(isset($equipment[$slot]) && $equipment[$slot])
+                                    <div class="equipment-item-border {{ $equipment[$slot]->item->getRarityColor() }} equipment-clickable" 
+                                         data-bs-toggle="tooltip" 
+                                         data-bs-html="true" 
+                                         data-bs-placement="top"
+                                         data-item-name="{{ method_exists($equipment[$slot], 'getDisplayName') ? $equipment[$slot]->getDisplayName() : $equipment[$slot]->item->name }}"
+                                         data-item-rarity="{{ $equipment[$slot]->item->rarity }}"
+                                         data-item-stats="{{ json_encode($equipment[$slot]->item->stats_modifiers ?? []) }}"
+                                         data-item-ac="{{ $equipment[$slot]->item->ac_bonus ?? 0 }}"
+                                         data-item-damage="{{ $equipment[$slot]->item->damage_dice ?? '' }}"
+                                         data-item-damage-bonus="{{ $equipment[$slot]->item->damage_bonus ?? 0 }}"
+                                         onclick="unequipPlayerItem({{ $equipment[$slot]->id }})"
+                                         title="Click to unequip">
+                                        <img src="{{ $equipment[$slot]->item->getImagePath() }}" 
+                                             alt="{{ $equipment[$slot]->item->name }}"
+                                             style="width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+                                    </div>
+                                @else
+                                    <div class="empty-equipment-slot-border" title="{{ $config[2] }}">
+                                        <i class="{{ $config[1] }}"></i>
+                                    </div>
+                                @endif
+                            </div>
                         @endforeach
                         
                         <!-- Weapon slots (larger) -->
@@ -152,12 +159,21 @@
                                  data-slot="{{ $slot }}" 
                                  style="position: absolute; {{ $config[0] }} width: 180px; height: 180px; z-index: 10;">
                                 @if(isset($equipment[$slot]) && $equipment[$slot])
-                                    <div class="equipment-item-border weapon-item {{ $equipment[$slot]->item->getRarityColor() }}" 
+                                    <div class="equipment-item-border weapon-item {{ $equipment[$slot]->item->getRarityColor() }} equipment-clickable" 
                                          data-bs-toggle="tooltip" 
                                          data-bs-html="true" 
                                          data-bs-placement="top"
-                                         title="@include('game.partials.item-tooltip', ['item' => $equipment[$slot]])">
-                                        <i class="{{ $config[1] }}"></i>
+                                         data-item-name="{{ method_exists($equipment[$slot], 'getDisplayName') ? $equipment[$slot]->getDisplayName() : $equipment[$slot]->item->name }}"
+                                         data-item-rarity="{{ $equipment[$slot]->item->rarity }}"
+                                         data-item-stats="{{ json_encode($equipment[$slot]->item->stats_modifiers ?? []) }}"
+                                         data-item-ac="{{ $equipment[$slot]->item->ac_bonus ?? 0 }}"
+                                         data-item-damage="{{ $equipment[$slot]->item->damage_dice ?? '' }}"
+                                         data-item-damage-bonus="{{ $equipment[$slot]->item->damage_bonus ?? 0 }}"
+                                         onclick="unequipPlayerItem({{ $equipment[$slot]->id }})"
+                                         title="Click to unequip">
+                                        <img src="{{ $equipment[$slot]->item->getImagePath() }}" 
+                                             alt="{{ $equipment[$slot]->item->name }}"
+                                             style="width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">
                                     </div>
                                 @else
                                     <div class="empty-equipment-slot-border weapon-empty" title="{{ $config[2] }}">
@@ -229,6 +245,8 @@
                                                 <span class="text-{{ $bonus > 0 ? 'success' : 'danger' }}" style="font-size: 0.8rem;">
                                                     @if($stat === 'weapon_damage')
                                                         WEAPON DMG: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
+                                                    @elseif($stat === 'ac')
+                                                        AC: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
                                                     @else
                                                         {{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
                                                     @endif
@@ -281,7 +299,12 @@
                                             @if($inventory[$category]->count() > 0)
                                                 @foreach($inventory[$category] as $playerItem)
                                                     <div class="inventory-item mb-2 p-2 border rounded {{ $playerItem->item->getRarityColor() }}" data-item-id="{{ $playerItem->id }}">
-                                                        <div class="d-flex justify-content-between align-items-start">
+                                                        <div class="d-flex align-items-start">
+                                                            <div class="me-2">
+                                                                <img src="{{ $playerItem->item->getImagePath() }}" 
+                                                                     alt="{{ $playerItem->item->name }}" 
+                                                                     style="width: 32px; height: 32px; object-fit: contain; border-radius: 4px;">
+                                                            </div>
                                                             <div class="flex-grow-1">
                                                                 <div class="fw-bold small">{{ $playerItem->item->name }}</div>
                                                                 <small class="text-muted">{{ ucfirst($playerItem->item->rarity) }}</small>
@@ -440,6 +463,15 @@
     transform: translateY(-2px);
 }
 
+.equipment-clickable {
+    cursor: pointer;
+}
+
+.equipment-clickable:hover {
+    filter: brightness(1.1);
+    transform: translateY(-3px);
+}
+
 .equipment-item-border.common { border-color: #6c757d; background: rgba(108, 117, 125, 0.9); }
 .equipment-item-border.uncommon { border-color: #28a745; background: rgba(40, 167, 69, 0.9); }
 .equipment-item-border.rare { border-color: #007bff; background: rgba(0, 123, 255, 0.9); }
@@ -522,24 +554,26 @@
 
 /* Dark mode support */
 .dark .stat-card {
-    background: rgba(33, 37, 41, 0.8);
-    border-color: #495057;
-    color: #f8f9fa;
+    background: var(--bg-accent);
+    border-color: var(--border-color);
+    color: var(--text-high-contrast);
 }
 
 .dark .stat-card:hover {
-    background: rgba(33, 37, 41, 1);
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
 }
 
 .dark .empty-equipment-slot-border {
-    background: rgba(33, 37, 41, 0.2);
-    border-color: #495057;
-    color: #adb5bd;
+    background: rgba(31, 41, 55, 0.3);
+    border-color: var(--border-color);
+    color: var(--text-medium-contrast);
 }
 
 .dark .empty-equipment-slot-border:hover {
-    background: rgba(33, 37, 41, 0.4);
-    border-color: #6c757d;
+    background: rgba(31, 41, 55, 0.5);
+    border-color: var(--text-medium-contrast);
+    color: var(--text-high-contrast);
 }
 </style>
 
@@ -678,11 +712,74 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Initialize Bootstrap tooltips
+    // Initialize Bootstrap tooltips with custom formatting for equipment items
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+        // Check if this is an equipment item with custom data
+        if (tooltipTriggerEl.hasAttribute('data-item-name')) {
+            const itemName = tooltipTriggerEl.getAttribute('data-item-name');
+            const itemRarity = tooltipTriggerEl.getAttribute('data-item-rarity');
+            const itemStats = JSON.parse(tooltipTriggerEl.getAttribute('data-item-stats') || '{}');
+            const itemAC = parseInt(tooltipTriggerEl.getAttribute('data-item-ac') || '0');
+            const itemDamage = tooltipTriggerEl.getAttribute('data-item-damage') || '';
+            const itemDamageBonus = parseInt(tooltipTriggerEl.getAttribute('data-item-damage-bonus') || '0');
+            
+            let tooltipContent = `<div class="text-center">
+                <div class="fw-bold text-${getRarityColor(itemRarity)}">${itemName}</div>
+                <div class="text-muted small">${itemRarity.charAt(0).toUpperCase() + itemRarity.slice(1)}</div>`;
+            
+            // Add damage info for weapons
+            if (itemDamage) {
+                tooltipContent += '<hr class="my-1"><div class="text-start">';
+                tooltipContent += `<div class="text-primary">🗡️ Damage: ${itemDamage}`;
+                if (itemDamageBonus > 0) {
+                    tooltipContent += `+${itemDamageBonus}`;
+                }
+                tooltipContent += '</div>';
+            }
+            
+            // Add AC info for armor
+            if (itemAC > 0) {
+                if (!itemDamage) tooltipContent += '<hr class="my-1"><div class="text-start">';
+                tooltipContent += `<div class="text-success">🛡️ AC: +${itemAC}</div>`;
+            }
+            
+            // Add stat modifiers
+            if (Object.keys(itemStats).length > 0) {
+                if (!itemDamage && itemAC === 0) tooltipContent += '<hr class="my-1"><div class="text-start">';
+                Object.keys(itemStats).forEach(stat => {
+                    if (itemStats[stat] !== 0) {
+                        const bonus = itemStats[stat];
+                        const color = bonus > 0 ? 'success' : 'danger';
+                        tooltipContent += `<div class="text-${color}">${stat.toUpperCase()}: ${bonus > 0 ? '+' : ''}${bonus}</div>`;
+                    }
+                });
+            }
+            
+            if (itemDamage || itemAC > 0 || Object.keys(itemStats).length > 0) {
+                tooltipContent += '</div>';
+            }
+            
+            tooltipContent += '</div>';
+            
+            return new bootstrap.Tooltip(tooltipTriggerEl, {
+                title: tooltipContent
+            });
+        } else {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        }
     });
+    
+    function getRarityColor(rarity) {
+        const rarityColors = {
+            'common': 'secondary',
+            'uncommon': 'success', 
+            'rare': 'primary',
+            'epic': 'info',
+            'legendary': 'warning'
+        };
+        return rarityColors[rarity] || 'secondary';
+    }
 });
 
 function equipPlayerItem(itemId) {
