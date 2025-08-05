@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\AdventureNode;
+
 class AdventureGenerationService
 {
     private array $roadSpecializations = [
@@ -115,7 +117,7 @@ class AdventureGenerationService
         ]
     ];
 
-    public function generateAdventure(string $seed, string $road, string $difficulty = 'normal', ?string $forcedModifier = null, ?string $location = null, bool $useRealWeather = false): array
+    public function generateAdventure(string $seed, string $road, string $difficulty = 'normal', ?string $forcedModifier = null, ?string $location = null, bool $useRealWeather = false, ?\App\Models\Adventure $adventure = null): array
     {
         $this->setSeed($seed);
         
@@ -131,11 +133,13 @@ class AdventureGenerationService
             'seed' => $seed,
             'road' => $road,
             'difficulty' => $difficulty,
+            'title' => $this->generateAdventureTitle($road, $difficulty, $modifier),
+            'description' => $this->generateAdventureDescription($specialization, $weather, $modifier),
             'specialization' => $specialization,
             'modifier' => $modifier,
             'weather' => $weather,
             'season' => $season,
-            'map' => $this->generateNodeMap(),
+            'map' => $this->generateNodeMap($adventure),
             'metadata' => [
                 'generated_at' => now(),
                 'estimated_duration' => $this->calculateDuration($difficulty, $modifier),
@@ -146,7 +150,7 @@ class AdventureGenerationService
         ];
     }
 
-    public function generateNodeMap(): array
+    public function generateNodeMap(?\App\Models\Adventure $adventure = null): array
     {
         $map = [];
         
@@ -162,23 +166,38 @@ class AdventureGenerationService
             $this->generateNode('2-3', 'combat', 2)
         ];
         
-        // Levels 3-9: 2-3 nodes with intersections
-        for ($level = 3; $level <= 9; $level++) {
+        // Levels 3-13: 2-3 nodes with intersections, with guaranteed rest areas
+        $restAreaLevels = $this->selectRestAreaLevels(); // Select 3 random levels for rest areas
+        
+        for ($level = 3; $level <= 13; $level++) {
             $nodeCount = rand(2, 3);
             $map[$level] = [];
             
             for ($i = 1; $i <= $nodeCount; $i++) {
+                // Force rest areas on selected levels
+                if (in_array($level, $restAreaLevels) && $i === 1) {
+                    $nodeType = 'rest';
+                } else {
+                    $nodeType = $this->randomNodeType($level);
+                }
+                
                 $map[$level][] = $this->generateNode(
                     "{$level}-{$i}",
-                    $this->randomNodeType($level),
+                    $nodeType,
                     $level
                 );
             }
         }
         
-        // Level 10: Boss node
-        $map[10] = [
-            $this->generateNode('10-boss', 'boss', 10)
+        // Level 14: Rest area before boss (mandatory rest before final battle)
+        $map[14] = [
+            $this->generateNode('14-1', 'rest', 14),
+            $this->generateNode('14-2', 'rest', 14)
+        ];
+        
+        // Level 15: Boss node
+        $map[15] = [
+            $this->generateNode('15-boss', 'boss', 15)
         ];
         
         // Generate connections between nodes
@@ -187,7 +206,7 @@ class AdventureGenerationService
         return [
             'nodes' => $map,
             'connections' => $connections,
-            'total_levels' => 10
+            'total_levels' => 15
         ];
     }
 
@@ -207,25 +226,49 @@ class AdventureGenerationService
                 ]);
                 
             case 'combat':
+                $itemGenerationService = app(\App\Services\ItemGenerationService::class);
+                $hasItemDrop = $itemGenerationService->getCombatDropChance($level) >= rand(1, 100);
+                
                 return array_merge($baseNode, [
                     'enemy_type' => $this->selectEnemy($level),
                     'enemy_count' => $this->getEnemyCount($level),
-                    'currency_reward' => $this->calculateCurrencyReward($level, false),
-                    'loot_chance' => $this->getLootChance($level)
+                    'currency_reward' => $this->calculateCurrencyReward($level, $hasItemDrop),
+                    'loot_chance' => $this->getLootChance($level),
+                    'has_item_drop' => $hasItemDrop,
+                    'item_type' => $hasItemDrop ? 'combat_loot' : null
                 ]);
                 
             case 'treasure':
+                $itemGenerationService = app(\App\Services\ItemGenerationService::class);
+                $hasItemDrop = $itemGenerationService->getTreasureDropChance($level) >= rand(1, 100);
+                
                 return array_merge($baseNode, [
                     'treasure_type' => $this->selectTreasureType($level),
-                    'currency_reward' => $this->calculateCurrencyReward($level, true),
-                    'guaranteed_loot' => true
+                    'currency_reward' => $this->calculateCurrencyReward($level, $hasItemDrop),
+                    'guaranteed_loot' => true,
+                    'has_item_drop' => $hasItemDrop,
+                    'item_type' => $hasItemDrop ? 'treasure_loot' : null
                 ]);
                 
             case 'event':
+                $itemGenerationService = app(\App\Services\ItemGenerationService::class);
+                $hasItemDrop = $itemGenerationService->getEventDropChance($level) >= rand(1, 100);
+                
                 return array_merge($baseNode, [
                     'event_type' => $this->selectEventType($level),
                     'skill_check_required' => $this->requiresSkillCheck(),
-                    'outcomes' => $this->generateEventOutcomes($level)
+                    'outcomes' => $this->generateEventOutcomes($level),
+                    'has_item_drop' => $hasItemDrop,
+                    'item_type' => $hasItemDrop ? 'event_loot' : null
+                ]);
+                
+            case 'npc_encounter':
+                return array_merge($baseNode, [
+                    'npc_type' => $this->selectNPCType($level),
+                    'npc_data' => $this->generateNPCData($level),
+                    'dialogue_options' => $this->generateDialogueOptions($level),
+                    'skill_checks' => $this->generateSkillChecks($level),
+                    'rewards' => $this->generateNPCRewards($level)
                 ]);
                 
             case 'rest':
@@ -250,32 +293,60 @@ class AdventureGenerationService
     private function generateConnections(array $map): array
     {
         $connections = [];
+        $maxLevel = count($map) - 1; // Dynamic max level based on map size
         
-        for ($level = 1; $level <= 9; $level++) {
+        for ($level = 1; $level <= $maxLevel; $level++) {
             $currentNodes = $map[$level];
             $nextNodes = $map[$level + 1];
             
-            foreach ($currentNodes as $currentNode) {
-                $connections[$currentNode['id']] = [];
+            if ($level == 1) {
+                // Start node connects to all level 2 nodes
+                $connections[$currentNodes[0]['id']] = array_column($nextNodes, 'id');
+            } else {
+                // Create logical forward connections
+                $currentCount = count($currentNodes);
+                $nextCount = count($nextNodes);
                 
-                // Connect to next level nodes based on position and intersection rules
-                if ($level == 1) {
-                    // Start node connects to all level 2 nodes
-                    foreach ($nextNodes as $nextNode) {
-                        $connections[$currentNode['id']][] = $nextNode['id'];
-                    }
-                } else {
-                    // Regular nodes connect to 1-2 nodes in next level
-                    $connectionCount = rand(1, min(2, count($nextNodes)));
-                    $availableNodes = array_column($nextNodes, 'id');
+                foreach ($currentNodes as $index => $currentNode) {
+                    $connections[$currentNode['id']] = [];
                     
-                    for ($i = 0; $i < $connectionCount; $i++) {
-                        $targetIndex = array_rand($availableNodes);
-                        $connections[$currentNode['id']][] = $availableNodes[$targetIndex];
-                        unset($availableNodes[$targetIndex]);
-                        $availableNodes = array_values($availableNodes);
-                        
-                        if (empty($availableNodes)) break;
+                    if ($currentCount == 1) {
+                        // Single node connects to all next nodes
+                        $connections[$currentNode['id']] = array_column($nextNodes, 'id');
+                    } elseif ($nextCount == 1) {
+                        // All current nodes connect to single next node
+                        $connections[$currentNode['id']] = [$nextNodes[0]['id']];
+                    } else {
+                        // Position-based connections
+                        if ($index == 0) {
+                            // Top node connects to top 1-2 nodes
+                            $connections[$currentNode['id']][] = $nextNodes[0]['id'];
+                            if ($nextCount > 1) {
+                                $connections[$currentNode['id']][] = $nextNodes[1]['id'];
+                            }
+                        } elseif ($index == $currentCount - 1) {
+                            // Bottom node connects to bottom 1-2 nodes
+                            $connections[$currentNode['id']][] = $nextNodes[$nextCount - 1]['id'];
+                            if ($nextCount > 1 && $nextCount > 1) {
+                                $connections[$currentNode['id']][] = $nextNodes[$nextCount - 2]['id'];
+                            }
+                        } else {
+                            // Middle nodes connect to middle or all nodes
+                            if ($nextCount == 2) {
+                                $connections[$currentNode['id']] = array_column($nextNodes, 'id');
+                            } else {
+                                // Connect to center nodes
+                                $centerIndex = intval($nextCount / 2);
+                                $connections[$currentNode['id']][] = $nextNodes[$centerIndex]['id'];
+                                if ($centerIndex > 0 && $centerIndex < $nextCount - 1) {
+                                    if (mt_rand(0, 1)) {
+                                        $connections[$currentNode['id']][] = $nextNodes[$centerIndex - 1]['id'];
+                                    } else {
+                                        $connections[$currentNode['id']][] = $nextNodes[$centerIndex + 1]['id'];
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -320,7 +391,7 @@ class AdventureGenerationService
 
     private function randomNodeType(int $level): string
     {
-        $types = ['combat', 'treasure', 'event'];
+        $types = ['combat', 'treasure', 'event', 'npc_encounter'];
         
         // Add rest nodes on levels 4 and 7
         if (in_array($level, [4, 7])) {
@@ -328,9 +399,10 @@ class AdventureGenerationService
         }
         
         $weights = [
-            'combat' => 50,
-            'treasure' => 25,
-            'event' => 20,
+            'combat' => 45,
+            'treasure' => 20,
+            'event' => 15,
+            'npc_encounter' => 15,
             'rest' => 5
         ];
         
@@ -364,13 +436,20 @@ class AdventureGenerationService
         return min(4, 1 + intval($level / 3));
     }
 
-    private function calculateCurrencyReward(int $level, bool $isTreasure = false, bool $isBoss = false): int
+    private function calculateCurrencyReward(int $level, bool $hasItemDrop = false, bool $isBoss = false): int
     {
         $base = 10;
         if ($isBoss) $base = 100;
-        elseif ($isTreasure) $base = 25;
+        else $base = 25;
         
-        return $base + ($level * 5);
+        $reward = $base + ($level * 5);
+        
+        // Reduce gold reward if node has item drop
+        if ($hasItemDrop && !$isBoss) {
+            $reward = intval($reward * 0.6); // 40% reduction
+        }
+        
+        return $reward;
     }
 
     private function getLootChance(int $level): float
@@ -464,5 +543,240 @@ class AdventureGenerationService
             'nightmare' => 10,
             default => 1
         };
+    }
+
+    private function generateAdventureTitle(string $road, string $difficulty, ?array $modifier): string
+    {
+        $roadNames = [
+            'forest_path' => 'Forest Path',
+            'mountain_trail' => 'Mountain Trail',
+            'coastal_road' => 'Coastal Road',
+            'desert_route' => 'Desert Route',
+            'river_crossing' => 'River Crossing',
+            'ancient_highway' => 'Ancient Highway',
+            'north' => 'Northern Route',
+            'south' => 'Southern Route',
+            'east' => 'Eastern Route',
+            'west' => 'Western Route'
+        ];
+
+        $difficultyAdjectives = [
+            'easy' => 'Peaceful',
+            'normal' => 'Mysterious',
+            'hard' => 'Dangerous',
+            'nightmare' => 'Cursed'
+        ];
+
+        $baseName = $roadNames[$road] ?? ucfirst(str_replace('_', ' ', $road));
+        $adjective = $difficultyAdjectives[$difficulty] ?? 'Unknown';
+        
+        if ($modifier) {
+            return "{$modifier['name']} {$baseName}";
+        }
+
+        return "{$adjective} {$baseName}";
+    }
+
+    private function generateAdventureDescription(array $specialization, array $weather, ?array $modifier): string
+    {
+        $themeDescriptions = [
+            'forest_nature' => 'venture through ancient woodlands filled with mystical creatures',
+            'mountain_earth' => 'climb treacherous peaks and navigate rocky terrain',
+            'water_coastal' => 'journey along dangerous coastlines and briny waters',
+            'desert_fire' => 'traverse scorching dunes under the blazing sun',
+            'water_river' => 'navigate rushing waters and marshy wetlands',
+            'ancient_ruins' => 'explore forgotten ruins and uncover ancient secrets',
+            'ice_winter' => 'brave the frozen wastes and icy winds'
+        ];
+
+        $baseDescription = $themeDescriptions[$specialization['theme']] ?? 'embark on an unknown adventure';
+        
+        $weatherDesc = '';
+        if ($weather['type'] !== 'clear') {
+            $weatherDesc = " The journey is complicated by {$weather['description']}.";
+        }
+
+        $modifierDesc = '';
+        if ($modifier) {
+            $modifierDesc = " This path bears the mark of {$modifier['name']}.";
+        }
+
+        return "A procedurally generated adventure where you {$baseDescription}.{$weatherDesc}{$modifierDesc}";
+    }
+
+    /**
+     * Select 3 random levels between 3-13 to place guaranteed rest areas
+     */
+    private function selectRestAreaLevels(): array
+    {
+        $availableLevels = range(3, 13);
+        shuffle($availableLevels);
+        return array_slice($availableLevels, 0, 3);
+    }
+
+    /**
+     * NPC Encounter Generation Methods
+     */
+    private function selectNPCType(int $level): string
+    {
+        $npcTypes = [
+            'traveler', 'merchant', 'scholar', 'guard', 'refugee', 
+            'hermit', 'pilgrim', 'lost_child', 'wounded_soldier',
+            'mysterious_stranger', 'artifact_hunter', 'local_guide'
+        ];
+        
+        // Higher level encounters have more exotic NPCs
+        if ($level >= 8) {
+            $npcTypes = array_merge($npcTypes, [
+                'ancient_spirit', 'cursed_noble', 'rogue_mage', 'exiled_knight'
+            ]);
+        }
+        
+        return $npcTypes[array_rand($npcTypes)];
+    }
+
+    private function generateNPCData(int $level): array
+    {
+        $names = [
+            'Aldric', 'Brenna', 'Castor', 'Delia', 'Edwin', 'Fiona',
+            'Gareth', 'Helena', 'Ivan', 'Jora', 'Kael', 'Luna',
+            'Magnus', 'Nora', 'Oscar', 'Petra', 'Quinn', 'Raven'
+        ];
+        
+        return [
+            'name' => $names[array_rand($names)],
+            'level' => max(1, $level + rand(-2, 2)),
+            'disposition' => $this->generateDisposition(),
+            'background' => $this->generateNPCBackground(),
+            'current_situation' => $this->generateSituation($level)
+        ];
+    }
+
+    private function generateDialogueOptions(int $level): array
+    {
+        return [
+            'greet' => [
+                'text' => 'Greet the stranger politely',
+                'requirements' => [],
+                'outcomes' => ['positive_reaction', 'neutral_reaction']
+            ],
+            'help_offer' => [
+                'text' => 'Offer assistance',
+                'requirements' => [],
+                'outcomes' => ['grateful_response', 'suspicious_response', 'grateful_reward']
+            ],
+            'intimidate' => [
+                'text' => 'Demand information',
+                'requirements' => ['str' => 12],
+                'outcomes' => ['intimidated_compliance', 'defiant_resistance', 'combat_provoked']
+            ],
+            'persuade' => [
+                'text' => 'Use charm and persuasion',
+                'requirements' => ['cha' => 12],
+                'outcomes' => ['charmed_cooperation', 'useful_information', 'special_reward']
+            ],
+            'investigate' => [
+                'text' => 'Ask probing questions',
+                'requirements' => ['int' => 12],
+                'outcomes' => ['hidden_truth_revealed', 'additional_context', 'quest_opportunity']
+            ]
+        ];
+    }
+
+    private function generateSkillChecks(int $level): array
+    {
+        $checks = [];
+        
+        // Random skill check based on level
+        if (rand(1, 100) <= 60) { // 60% chance of skill check
+            $skills = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+            $skill = $skills[array_rand($skills)];
+            $difficulty = 10 + $level + rand(0, 4);
+            
+            $checks[] = [
+                'skill' => $skill,
+                'difficulty' => $difficulty,
+                'description' => $this->getSkillCheckDescription($skill),
+                'success_outcome' => 'skill_success',
+                'failure_outcome' => 'skill_failure'
+            ];
+        }
+        
+        return $checks;
+    }
+
+    private function generateNPCRewards(int $level): array
+    {
+        return [
+            'currency' => rand(20, 60) * $level,
+            'experience' => rand(10, 30) * $level,
+            'reputation' => rand(1, 3),
+            'information' => $this->generateInformation($level),
+            'potential_recruitment' => rand(1, 100) <= 20 // 20% chance NPC can be recruited
+        ];
+    }
+
+    private function generateDisposition(): string
+    {
+        $dispositions = ['friendly', 'neutral', 'cautious', 'desperate', 'suspicious', 'grateful'];
+        return $dispositions[array_rand($dispositions)];
+    }
+
+    private function generateNPCBackground(): string
+    {
+        $backgrounds = [
+            'A traveling merchant seeking new trade routes',
+            'A scholar researching ancient mysteries',
+            'A refugee fleeing from distant troubles',
+            'A guard separated from their patrol',
+            'A pilgrim on a spiritual journey',
+            'A local guide who knows secret paths'
+        ];
+        return $backgrounds[array_rand($backgrounds)];
+    }
+
+    private function generateSituation(int $level): string
+    {
+        $situations = [
+            'Lost and seeking directions to the nearest town',
+            'Injured and in need of healing assistance',
+            'Being hunted by bandits and seeking protection',
+            'Guarding a valuable cargo shipment',
+            'Searching for a missing family member',
+            'Investigating strange occurrences in the area'
+        ];
+        return $situations[array_rand($situations)];
+    }
+
+    private function getSkillCheckDescription(string $skill): string
+    {
+        $descriptions = [
+            'str' => 'Help move heavy obstacles blocking their path',
+            'dex' => 'Navigate treacherous terrain to reach them safely',
+            'con' => 'Endure harsh conditions to assist them',
+            'int' => 'Solve a puzzle or riddle they present',
+            'wis' => 'Perceive hidden dangers or true intentions',
+            'cha' => 'Convince them to trust you with sensitive information'
+        ];
+        
+        return $descriptions[$skill] ?? 'Face an unknown challenge';
+    }
+
+    private function generateInformation(int $level): array
+    {
+        $infoTypes = [
+            'Hidden treasure location nearby',
+            'Shortcut to avoid dangerous enemies',
+            'Warning about upcoming hazards',
+            'Local lore and legends',
+            'Information about the road ahead',
+            'Rumors from other travelers'
+        ];
+        
+        return [
+            'type' => $infoTypes[array_rand($infoTypes)],
+            'value' => rand(1, $level),
+            'description' => 'Valuable information about the area'
+        ];
     }
 }

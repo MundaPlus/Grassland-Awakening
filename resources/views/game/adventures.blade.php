@@ -58,26 +58,36 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h3 class="h6 mb-0" id="adventure-{{ $adventure->id }}">{{ $adventure->title }}</h3>
-                                        <span class="badge bg-warning" aria-label="In progress">In Progress</span>
+                                        @php
+                                            $progress = round($adventure->getCurrentProgress() * 100);
+                                        @endphp
+                                        @if($progress >= 100)
+                                            <span class="badge bg-success" aria-label="Completed">Completed</span>
+                                        @else
+                                            <span class="badge bg-warning" aria-label="In progress">In Progress</span>
+                                        @endif
                                     </div>
-                                    <p class="small text-muted mb-2">{{ $adventure->road_type }} • {{ ucfirst($adventure->difficulty) }}</p>
+                                    <p class="small text-muted mb-2">{{ ucfirst(str_replace('_', ' ', $adventure->road)) }} • {{ ucfirst($adventure->difficulty) }}</p>
                                     <p class="card-text">{{ Str::limit($adventure->description, 100) }}</p>
                                     
                                     <!-- Progress Bar -->
-                                    <div class="progress mb-3" role="progressbar" aria-valuenow="{{ $adventure->progress }}" aria-valuemin="0" aria-valuemax="100" aria-label="Adventure progress {{ $adventure->progress }}%">
-                                        <div class="progress-bar" style="width: {{ $adventure->progress }}%">
-                                            {{ $adventure->progress }}%
+                                    @php
+                                        $progress = round($adventure->getCurrentProgress() * 100);
+                                    @endphp
+                                    <div class="progress mb-3" role="progressbar" aria-valuenow="{{ $progress }}" aria-valuemin="0" aria-valuemax="100" aria-label="Adventure progress {{ $progress }}%">
+                                        <div class="progress-bar" style="width: {{ $progress }}%">
+                                            {{ $progress }}%
                                         </div>
                                     </div>
 
                                     <div class="d-flex gap-2">
-                                        <a href="{{ route('game.adventure', $adventure->id) }}" class="btn btn-primary btn-sm flex-fill" aria-label="Continue {{ $adventure->title }}">
-                                            <i class="fas fa-play" aria-hidden="true"></i> Continue
+                                        <a href="{{ route('game.adventure-map', $adventure->id) }}" class="btn btn-primary btn-sm" style="flex: 2;" aria-label="Continue {{ $adventure->title }}">
+                                            Open Map
                                         </a>
-                                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        <button type="button" class="btn btn-outline-danger btn-sm" style="flex: 1;"
                                                 onclick="abandonAdventure({{ $adventure->id }})"
                                                 aria-label="Abandon {{ $adventure->title }}">
-                                            <i class="fas fa-times" aria-hidden="true"></i>
+                                            Abandon
                                         </button>
                                     </div>
                                 </div>
@@ -169,25 +179,36 @@
                                     </div>
                                     @endif
 
-                                    <div class="d-flex gap-2">
-                                        @if($player->level >= $adventure->level_requirement)
-                                        <button type="button" class="btn btn-success btn-sm flex-fill" 
-                                                onclick="startAdventure({{ $adventure->id }})"
-                                                aria-label="Start {{ $adventure->title }}">
-                                            <i class="fas fa-play" aria-hidden="true"></i> Start Adventure
-                                        </button>
-                                        @else
-                                        <button type="button" class="btn btn-secondary btn-sm flex-fill" disabled 
-                                                aria-label="Level {{ $adventure->level_requirement }} required for {{ $adventure->title }}">
-                                            <i class="fas fa-lock" aria-hidden="true"></i> Level {{ $adventure->level_requirement }} Required
-                                        </button>
-                                        @endif
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#adventurePreviewModal{{ $adventure->id }}"
-                                                aria-label="Preview {{ $adventure->title }}">
-                                            <i class="fas fa-eye" aria-hidden="true"></i>
-                                        </button>
+                                    <div class="row g-2">
+                                        <div class="col-8">
+                                            @if($player->level >= $adventure->level_requirement)
+                                            <button type="button" class="btn btn-success btn-sm w-100" 
+                                                    onclick="startAdventure({{ $adventure->id }})"
+                                                    aria-label="Start {{ $adventure->title }}">
+                                                Start Adventure
+                                            </button>
+                                            @else
+                                            <button type="button" class="btn btn-secondary btn-sm w-100" disabled 
+                                                    aria-label="Level {{ $adventure->level_requirement }} required for {{ $adventure->title }}">
+                                                Level {{ $adventure->level_requirement }} Required
+                                            </button>
+                                            @endif
+                                        </div>
+                                        <div class="col-2">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm w-100" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#adventurePreviewModal{{ $adventure->id }}"
+                                                    aria-label="Preview {{ $adventure->title }}">
+                                                Preview
+                                            </button>
+                                        </div>
+                                        <div class="col-2">
+                                            <button type="button" class="btn btn-outline-danger btn-sm w-100" 
+                                                    onclick="deleteAdventure({{ $adventure->id }})"
+                                                    aria-label="Delete {{ $adventure->title }}">
+                                                Delete
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -199,6 +220,82 @@
             </div>
         </div>
     </div>
+
+    <!-- Completed Adventures -->
+    @if($completedAdventures->isNotEmpty())
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Recently Completed Adventures</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach($completedAdventures as $adventure)
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100 border-success adventure-card" role="article" aria-labelledby="completed-adventure-{{ $adventure->id }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h3 class="h6 mb-0" id="completed-adventure-{{ $adventure->id }}">{{ $adventure->title }}</h3>
+                                        @if($adventure->status === 'completed')
+                                            <span class="badge bg-success" aria-label="Completed">✓ Completed</span>
+                                        @else
+                                            <span class="badge bg-danger" aria-label="Failed">✗ Failed</span>
+                                        @endif
+                                    </div>
+                                    <p class="small text-muted mb-2">{{ ucfirst(str_replace('_', ' ', $adventure->road)) }} • {{ ucfirst($adventure->difficulty) }}</p>
+                                    <p class="card-text">{{ Str::limit($adventure->description, 100) }}</p>
+                                    
+                                    <!-- Completion Stats -->
+                                    <div class="completion-stats mb-3">
+                                        @if($adventure->status === 'completed')
+                                            <small class="text-success">
+                                                <i class="fas fa-trophy" aria-hidden="true"></i> Adventure Completed
+                                                @if($adventure->completed_at)
+                                                    <br><i class="fas fa-calendar" aria-hidden="true"></i> {{ $adventure->completed_at->format('M d, Y') }}
+                                                @endif
+                                            </small>
+                                        @else
+                                            <small class="text-danger">
+                                                <i class="fas fa-skull" aria-hidden="true"></i> Adventure Failed
+                                                @if($adventure->completed_at)
+                                                    <br><i class="fas fa-calendar" aria-hidden="true"></i> {{ $adventure->completed_at->format('M d, Y') }}
+                                                @endif
+                                            </small>
+                                        @endif
+                                    </div>
+
+                                    <div class="row g-2">
+                                        <div class="col-8">
+                                            @if($adventure->status === 'completed')
+                                                <button type="button" class="btn btn-outline-success btn-sm w-100" disabled>
+                                                    ✓ Completed
+                                                </button>
+                                            @else
+                                                <button type="button" class="btn btn-outline-danger btn-sm w-100" disabled>
+                                                    ✗ Failed
+                                                </button>
+                                            @endif
+                                        </div>
+                                        <div class="col-4">
+                                            <button type="button" class="btn btn-outline-info btn-sm w-100" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#adventurePreviewModal{{ $adventure->id }}"
+                                                    aria-label="View {{ $adventure->title }}">
+                                                View
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 <!-- Generate Adventure Modal -->
@@ -326,53 +423,99 @@
 </div>
 @endforeach
 
+
 <script>
 function startAdventure(adventureId) {
-    if (confirm('Start this adventure? You will be committed until it is completed or abandoned.')) {
-        fetch(`/game/adventures/${adventureId}/start`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = `/game/adventure/${adventureId}`;
-            } else {
-                alert(data.message || 'Failed to start adventure. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-        });
-    }
+    GameUI.showConfirmModal(
+        'Start Adventure',
+        'Start this adventure? You will be committed until it is completed or abandoned.',
+        function() {
+            fetch(`/game/adventures/${adventureId}/start`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    GameUI.showToast('Adventure started successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/game/adventure/${adventureId}/map`;
+                    }, 1000);
+                } else {
+                    GameUI.showErrorModal(data.message || 'Failed to start adventure. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                GameUI.showErrorModal('An error occurred. Please try again.');
+            });
+        }
+    );
 }
 
 function abandonAdventure(adventureId) {
-    if (confirm('Are you sure you want to abandon this adventure? Progress will be lost.')) {
-        fetch(`/game/adventures/${adventureId}/abandon`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to abandon adventure. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-        });
-    }
+    GameUI.showConfirmModal(
+        'Abandon Adventure',
+        'Are you sure you want to abandon this adventure? Progress will be lost.',
+        function() {
+            fetch(`/game/adventures/${adventureId}/abandon`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    GameUI.showToast('Adventure abandoned', 'info');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    GameUI.showErrorModal(data.message || 'Failed to abandon adventure. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                GameUI.showErrorModal('An error occurred. Please try again.');
+            });
+        }
+    );
+}
+
+function deleteAdventure(adventureId) {
+    GameUI.showConfirmModal(
+        'Delete Adventure',
+        'Are you sure you want to delete this adventure? This action cannot be undone.',
+        function() {
+            fetch(`/game/adventures/${adventureId}/abandon`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    GameUI.showToast('Adventure deleted', 'info');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    GameUI.showErrorModal(data.message || 'Failed to delete adventure. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                GameUI.showErrorModal('An error occurred. Please try again.');
+            });
+        }
+    );
 }
 
 function filterAdventures() {

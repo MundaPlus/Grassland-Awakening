@@ -264,6 +264,20 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('game.character') ? 'active' : '' }}" 
+                           href="{{ route('game.character') }}"
+                           aria-current="{{ request()->routeIs('game.character') ? 'page' : 'false' }}">
+                            👤 Character
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('game.inventory') ? 'active' : '' }}" 
+                           href="{{ route('game.inventory') }}"
+                           aria-current="{{ request()->routeIs('game.inventory') ? 'page' : 'false' }}">
+                            🎒 Inventory
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('game.village') ? 'active' : '' }}" 
                            href="{{ route('game.village') }}"
                            aria-current="{{ request()->routeIs('game.village') ? 'page' : 'false' }}">
@@ -428,6 +442,35 @@
             @if(session('error'))
                 announcePageChange("Error: {{ session('error') }}");
             @endif
+            
+            // Level up notifications
+            @if(session('combat_level_up') || session('npc_level_up'))
+                @php
+                    $levelUpData = session('combat_level_up') ?? session('npc_level_up');
+                    // Clear the session data immediately after reading it
+                    session()->forget(['combat_level_up', 'npc_level_up']);
+                @endphp
+                @if(!empty($levelUpData['levels_gained']))
+                    @foreach($levelUpData['levels_gained'] as $levelGain)
+                        GameUI.showToast('🎉 Level Up! You are now level {{ $levelGain["new_level"] }}!', 'success');
+                    @endforeach
+                    @if($levelUpData['can_allocate_stats'])
+                        setTimeout(() => {
+                            // Only show stat allocation modal if we haven't shown it this session
+                            if (!sessionStorage.getItem('stat_points_modal_shown_' + {{ auth()->id() }})) {
+                                sessionStorage.setItem('stat_points_modal_shown_' + {{ auth()->id() }}, 'true');
+                                GameUI.showConfirmModal(
+                                    'Stat Points Available!', 
+                                    'You have unallocated stat points. Would you like to go to your character sheet to allocate them?',
+                                    function() {
+                                        window.location.href = '{{ route("game.character") }}';
+                                    }
+                                );
+                            }
+                        }, 2000);
+                    @endif
+                @endif
+            @endif
         });
         
         // Add role and aria-label to progress bars
@@ -493,6 +536,106 @@
                 updateThemeToggleIcons();
             });
         }
+
+        // Global modal and toast utilities
+        window.GameUI = {
+            showConfirmModal: function(title, message, confirmCallback) {
+                let modal = document.getElementById('globalConfirmationModal');
+                if (!modal) {
+                    // Create modal if it doesn't exist
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div class="modal fade" id="globalConfirmationModal" tabindex="-1" aria-labelledby="globalConfirmationModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="globalConfirmationModalLabel">Confirm Action</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body" id="globalConfirmationModalBody">
+                                        Are you sure you want to proceed?
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" class="btn btn-primary" id="globalConfirmationModalConfirm">Confirm</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                    modal = document.getElementById('globalConfirmationModal');
+                }
+                
+                document.getElementById('globalConfirmationModalLabel').textContent = title;
+                document.getElementById('globalConfirmationModalBody').textContent = message;
+                
+                const confirmBtn = document.getElementById('globalConfirmationModalConfirm');
+                confirmBtn.onclick = function() {
+                    bootstrap.Modal.getInstance(modal).hide();
+                    confirmCallback();
+                };
+                
+                new bootstrap.Modal(modal).show();
+            },
+
+            showErrorModal: function(message) {
+                let modal = document.getElementById('globalErrorModal');
+                if (!modal) {
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div class="modal fade" id="globalErrorModal" tabindex="-1" aria-labelledby="globalErrorModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="globalErrorModalLabel">Error</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body" id="globalErrorModalBody">
+                                        An error occurred. Please try again.
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                    modal = document.getElementById('globalErrorModal');
+                }
+                
+                document.getElementById('globalErrorModalBody').textContent = message;
+                new bootstrap.Modal(modal).show();
+            },
+
+            showToast: function(message, type = 'success') {
+                let container = document.getElementById('globalToastContainer');
+                if (!container) {
+                    document.body.insertAdjacentHTML('beforeend', 
+                        '<div class="toast-container position-fixed bottom-0 end-0 p-3" id="globalToastContainer"></div>'
+                    );
+                    container = document.getElementById('globalToastContainer');
+                }
+                
+                const toastId = 'toast-' + Date.now();
+                const bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-info');
+                
+                const toastHtml = `
+                    <div id="${toastId}" class="toast ${bgClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+                
+                container.insertAdjacentHTML('beforeend', toastHtml);
+                
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+                toast.show();
+                
+                toastElement.addEventListener('hidden.bs.toast', () => {
+                    toastElement.remove();
+                });
+            }
+        };
     </script>
     
     @stack('scripts')

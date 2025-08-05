@@ -1,0 +1,1248 @@
+@extends('game.layout')
+
+@section('title', 'Character Sheet')
+
+@section('content')
+<div class="container-fluid">
+    <!-- Streamlined Character Header -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-body py-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <div class="character-portrait position-relative">
+                                <img src="{{ $player->getCharacterImagePath() }}" 
+                                     alt="{{ ucfirst($player->gender) }} Character" 
+                                     class="character-image rounded"
+                                     style="width: 100px; height: 100px; object-fit: cover;">
+                                <button class="btn btn-sm btn-outline-secondary position-absolute bottom-0 end-0" 
+                                        onclick="showGenderModal()" title="Change Gender">
+                                    ⚧
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h1 class="h4 mb-1">{{ $player->character_name }}</h1>
+                            <p class="text-muted mb-2">Level {{ $player->level }} {{ ucfirst($player->gender) }} • AC {{ $totalAC }} • {{ $player->hp }}/{{ $player->max_hp }} HP</p>
+                            <div class="progress mb-1" style="height: 15px;">
+                                @php
+                                    $expToNext = $player->calculateExperienceToNextLevel();
+                                    $expProgress = $expToNext > 0 ? ($player->experience / $expToNext) * 100 : 100;
+                                @endphp
+                                <div class="progress-bar bg-info" style="width: {{ $expProgress }}%">
+                                    {{ $player->experience }}/{{ $expToNext }} XP
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ $expToNext - $player->experience }} XP to next level</small>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            @if($player->canLevelUp())
+                                <button class="btn btn-success mb-2" onclick="levelUpPlayer()">
+                                    🎉 Level Up!
+                                </button>
+                            @endif
+                            @if($player->hasUnallocatedStatPoints())
+                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#statAllocationModal">
+                                    Allocate Points ({{ $player->unallocated_stat_points }})
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" style="min-height: calc(100vh - 200px);">
+        <!-- Left Half: Character with Equipment -->
+        <div class="col-lg-6" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); position: relative;">
+            <div class="character-display-container position-relative h-100 d-flex align-items-center justify-content-center" style="min-height: 800px;">
+                <!-- Character Image -->
+                <div class="character-image-wrapper position-relative">
+                    <img src="{{ $player->getCharacterImagePath() }}" 
+                         alt="{{ ucfirst($player->gender) }} Character" 
+                         class="character-image-full" 
+                         style="width: 350px; height: 622px; object-fit: contain;">
+                    
+                    <!-- Equipment Slots Positioned on Character -->
+                    @php
+                        // Define equipment slots with precise positions for 594x1056 image scaled to 350x622
+                        $equipmentPositions = [
+                            // Head area
+                            'helmet' => ['top: 50px; left: 50%; transform: translateX(-50%);', 'fas fa-hard-hat', 'Helmet'],
+                            
+                            // Neck area
+                            'necklace' => ['top: 120px; left: 50%; transform: translateX(-50%);', 'fas fa-gem', 'Necklace'],
+                            
+                            // Shoulder areas
+                            'shoulder_left' => ['top: 140px; left: 30px;', 'fas fa-shield-alt', 'Left Shoulder'],
+                            'shoulder_right' => ['top: 140px; right: 30px;', 'fas fa-shield-alt', 'Right Shoulder'],
+                            
+                            // Chest area
+                            'chest' => ['top: 200px; left: 50%; transform: translateX(-50%);', 'fas fa-vest', 'Chest Armor'],
+                            
+                            // Arm areas
+                            'gloves' => ['top: 280px; left: 20px;', 'fas fa-mitten', 'Gloves'],
+                            'bracelet' => ['top: 280px; right: 20px;', 'fas fa-circle', 'Bracelet'],
+                            
+                            // Weapon areas
+                            'weapon_1' => ['top: 220px; left: -20px;', 'fas fa-sword', 'Main Hand'],
+                            'weapon_2' => ['top: 220px; right: -20px;', 'fas fa-dagger', 'Off Hand'],
+                            'shield' => ['top: 220px; right: -20px;', 'fas fa-shield-alt', 'Shield'],
+                            
+                            // Waist area
+                            'belt' => ['top: 350px; left: 50%; transform: translateX(-50%);', 'fas fa-circle', 'Belt'],
+                            
+                            // Ring areas (on hands)
+                            'ring_1' => ['top: 300px; left: 80px;', 'fas fa-ring', 'Ring 1'],
+                            'ring_2' => ['top: 320px; left: 80px;', 'fas fa-ring', 'Ring 2'],
+                            
+                            // Leg area
+                            'pants' => ['top: 400px; left: 50%; transform: translateX(-50%);', 'fas fa-socks', 'Pants'],
+                            
+                            // Feet area
+                            'boots' => ['bottom: 50px; left: 50%; transform: translateX(-50%);', 'fas fa-shoe-prints', 'Boots'],
+                        ];
+                    @endphp
+                    
+                    @foreach($equipmentPositions as $slot => $config)
+                        @if(in_array($slot, array_merge($armorSlots ?? [], $weaponSlots ?? [], $accessorySlots ?? [])))
+                            <div class="equipment-slot-positioned" data-slot="{{ $slot }}" 
+                                 style="position: absolute; {{ $config[0] }} width: 60px; height: 50px; z-index: 10;">
+                                @if(isset($equipment[$slot]) && $equipment[$slot])
+                                    <div class="equipment-item-mini {{ $equipment[$slot]->item->getRarityColor() }}" 
+                                         title="{{ $equipment[$slot]->item->name }}">
+                                        <div class="item-name-mini">
+                                            {{ Str::limit($equipment[$slot]->item->name, 8) }}
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="empty-slot-mini" title="{{ $config[2] }}">
+                                        <i class="{{ $config[1] }}"></i>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Half: Stats and Inventory -->
+        <div class="col-lg-6">
+            <!-- Top Half: Stats and Character Info -->
+            <div class="row h-50">
+                <div class="col-12">
+            <!-- Ability Scores -->
+                <!-- Stats and Character Info -->
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="h6 mb-0">Character Stats</h3>
+                    @if($player->hasUnallocatedStatPoints())
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#statAllocationModal">
+                            Allocate ({{ $player->unallocated_stat_points }})
+                        </button>
+                    @endif
+                </div>
+                    <div class="card-body py-2" style="max-height: 350px; overflow-y: auto;">
+                        <!-- Compact Stats and Info Layout -->
+                        <div class="row g-2 mb-3">
+                            <!-- Combat Stats Row -->
+                            <div class="col-12">
+                                <div class="row text-center g-2">
+                                    <div class="col-3">
+                                        <div class="fw-bold text-success">{{ $player->hp }}/{{ $player->max_hp }}</div>
+                                        <small class="text-muted">HP</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="fw-bold text-primary">{{ $totalAC }}</div>
+                                        <small class="text-muted">AC</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="fw-bold text-warning">{{ number_format($player->persistent_currency) }}</div>
+                                        <small class="text-muted">Gold</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="fw-bold text-info">{{ $player->level }}</div>
+                                        <small class="text-muted">Level</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Ability Scores -->
+                        <div class="row g-2">
+                            @foreach(['str' => 'STR', 'dex' => 'DEX', 'con' => 'CON', 'int' => 'INT', 'wis' => 'WIS', 'cha' => 'CHA'] as $stat => $name)
+                                <div class="col-4">
+                                    <div class="stat-block p-2 border rounded text-center">
+                                        <div class="fw-bold small">{{ $name }}</div>
+                                        <div class="small">{{ $player->getAttribute($stat) }}
+                                            @if($equipmentBonuses[$stat] != 0)
+                                                <span class="text-{{ $equipmentBonuses[$stat] > 0 ? 'success' : 'danger' }}">
+                                                    {{ $equipmentBonuses[$stat] > 0 ? '+' : '' }}{{ $equipmentBonuses[$stat] }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="badge bg-secondary small">{{ floor(($totalStats[$stat] - 10) / 2) > 0 ? '+' : '' }}{{ floor(($totalStats[$stat] - 10) / 2) }}</div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Half: Inventory -->
+            <div class="row h-50 mt-3">
+                <div class="col-12">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h3 class="h6 mb-0">Inventory</h3>
+                        </div>
+                        <div class="card-body p-2">
+                            <div class="inventory-tabs">
+                                <ul class="nav nav-pills nav-fill mb-2" id="inventory-tabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active small" id="weapons-tab" data-bs-toggle="pill" data-bs-target="#weapons" type="button" role="tab">
+                                            Weapons <span class="badge bg-secondary ms-1">{{ $inventory['weapons']->count() }}</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link small" id="armor-tab" data-bs-toggle="pill" data-bs-target="#armor" type="button" role="tab">
+                                            Armor <span class="badge bg-secondary ms-1">{{ $inventory['armor']->count() }}</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link small" id="accessories-tab" data-bs-toggle="pill" data-bs-target="#accessories" type="button" role="tab">
+                                            Accessories <span class="badge bg-secondary ms-1">{{ $inventory['accessories']->count() }}</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                                
+                                <div class="tab-content" id="inventory-content" style="max-height: 300px; overflow-y: auto;">
+                                    @foreach(['weapons', 'armor', 'accessories'] as $category)
+                                        <div class="tab-pane fade {{ $category === 'weapons' ? 'show active' : '' }}" id="{{ $category }}" role="tabpanel">
+                                            @if($inventory[$category]->count() > 0)
+                                                @foreach($inventory[$category] as $playerItem)
+                                                    <div class="inventory-item mb-2 p-2 border rounded {{ $playerItem->item->getRarityColor() }}" data-item-id="{{ $playerItem->id }}">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <div class="flex-grow-1">
+                                                                <div class="fw-bold small">{{ $playerItem->item->name }}</div>
+                                                                <small class="text-muted">{{ ucfirst($playerItem->item->rarity) }} {{ ucfirst($playerItem->item->type) }}</small>
+                                                                @if($playerItem->item->stats_modifiers)
+                                                                    <div class="small">
+                                                                        @foreach($playerItem->item->stats_modifiers as $stat => $bonus)
+                                                                            @if($bonus != 0)
+                                                                                <span class="me-2">{{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}</span>
+                                                                            @endif
+                                                                        @endforeach
+                                                                    </div>
+                                                                @endif
+                                                                @if($playerItem->item->damage_dice)
+                                                                    <div class="small">Damage: {{ $playerItem->item->damage_dice }}@if($playerItem->item->damage_bonus > 0)+{{ $playerItem->item->damage_bonus }}@endif</div>
+                                                                @endif
+                                                                @if($playerItem->item->ac_bonus)
+                                                                    <div class="small">AC: +{{ $playerItem->item->ac_bonus }}</div>
+                                                                @endif
+                                                                @if($playerItem->quantity > 1)
+                                                                    <div class="small">Quantity: {{ $playerItem->quantity }}</div>
+                                                                @endif
+                                                            </div>
+                                                            <div class="ms-2">
+                                                                @if($playerItem->canEquip())
+                                                                    <button class="btn btn-sm btn-success equip-item-btn" data-item-id="{{ $playerItem->id }}">
+                                                                        Equip
+                                                                    </button>
+                                                                @elseif($playerItem->canUnequip())
+                                                                    <button class="btn btn-sm btn-warning unequip-item-btn" data-item-id="{{ $playerItem->id }}">
+                                                                        Unequip
+                                                                    </button>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            @else
+                                                <div class="text-center text-muted py-3">
+                                                    <i class="fas fa-box-open fa-2x mb-2"></i>
+                                                    <div>No {{ $category }} in inventory</div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+            <!-- Equipment Slots -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Equipment</h3>
+                </div>
+                <div class="card-body">
+                    <div class="character-equipment-container position-relative" style="min-height: 500px;">
+                        <!-- Character Image Background -->
+                        <div class="character-image-wrapper position-absolute top-50 start-50 translate-middle">
+                            <img src="{{ $player->getCharacterImagePath() }}" 
+                                 alt="Character" 
+                                 class="character-image" 
+                                 style="width: 180px; height: 240px; object-fit: contain; opacity: 0.7;">
+                        </div>
+                        
+                        <!-- Equipment Slots Positioned Around Character -->
+                        @php
+                            // Define common equipment slots with positions
+                            $equipmentSlots = [
+                                'helmet' => ['top: 20px; left: 50%; transform: translateX(-50%);', 'fas fa-hard-hat', 'Helmet'],
+                                'necklace' => ['top: 60px; left: 50%; transform: translateX(-50%);', 'fas fa-gem', 'Necklace'],
+                                'chest' => ['top: 120px; left: 50%; transform: translateX(-50%);', 'fas fa-vest', 'Chest Armor'],
+                                'weapon_1' => ['top: 140px; left: 20px;', 'fas fa-sword', 'Main Hand'],
+                                'weapon_2' => ['top: 140px; right: 20px;', 'fas fa-dagger', 'Off Hand'],
+                                'shield' => ['top: 140px; right: 20px;', 'fas fa-shield-alt', 'Shield'],
+                                'gloves' => ['top: 180px; left: 10px;', 'fas fa-mitten', 'Gloves'],
+                                'ring_1' => ['top: 200px; right: 10px;', 'fas fa-ring', 'Ring 1'],
+                                'ring_2' => ['top: 240px; right: 10px;', 'fas fa-ring', 'Ring 2'],
+                                'pants' => ['top: 260px; left: 50%; transform: translateX(-50%);', 'fas fa-socks', 'Pants'],
+                                'boots' => ['bottom: 20px; left: 50%; transform: translateX(-50%);', 'fas fa-shoe-prints', 'Boots'],
+                            ];
+                        @endphp
+                        
+                        @foreach($equipmentSlots as $slot => $config)
+                            @if(in_array($slot, array_merge($armorSlots ?? [], $weaponSlots ?? [], $accessorySlots ?? [])))
+                                <div class="equipment-slot-positioned" data-slot="{{ $slot }}" style="position: absolute; {{ $config[0] }} width: {{ in_array($slot, ['ring_1', 'ring_2']) ? '40px' : (in_array($slot, ['gloves', 'necklace']) ? '50px' : '60px') }};">
+                                    @if(isset($equipment[$slot]) && $equipment[$slot])
+                                        <div class="equipment-item-mini {{ $equipment[$slot]->item->getRarityColor() }}" title="{{ $equipment[$slot]->item->name }}">
+                                            <div class="item-name-mini">
+                                                @if(in_array($slot, ['ring_1', 'ring_2']))
+                                                    {{ strtoupper(substr($slot, -1)) }}
+                                                @else
+                                                    {{ Str::limit($equipment[$slot]->item->name, in_array($slot, ['gloves', 'necklace']) ? 6 : 8) }}
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="empty-slot-mini" title="{{ $config[2] }}">
+                                            <i class="{{ $config[1] }}"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+                        @endforeach
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Column: Stats -->
+        <div class="col-lg-4">
+            <!-- Character Stats -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="h5 mb-0">Ability Scores</h3>
+                    @if($player->hasUnallocatedStatPoints())
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#statAllocationModal">
+                            Allocate Points ({{ $player->unallocated_stat_points }})
+                        </button>
+                    @endif
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach(['str' => 'Strength', 'dex' => 'Dexterity', 'con' => 'Constitution', 'int' => 'Intelligence', 'wis' => 'Wisdom', 'cha' => 'Charisma'] as $stat => $name)
+                            <div class="col-12">
+                                <div class="stat-block p-3 border rounded">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ $name }}</h6>
+                                            <div class="stat-breakdown">
+                                                <span class="base-stat">{{ $player->getAttribute($stat) }}</span>
+                                                @if($equipmentBonuses[$stat] != 0)
+                                                    <span class="equipment-bonus text-{{ $equipmentBonuses[$stat] > 0 ? 'success' : 'danger' }}">
+                                                        {{ $equipmentBonuses[$stat] > 0 ? '+' : '' }}{{ $equipmentBonuses[$stat] }}
+                                                    </span>
+                                                @endif
+                                                <span class="total-stat fw-bold"> = {{ $totalStats[$stat] }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="stat-modifier">
+                                                {{ floor(($totalStats[$stat] - 10) / 2) > 0 ? '+' : '' }}{{ floor(($totalStats[$stat] - 10) / 2) }}
+                                            </div>
+                                            <small class="text-muted">modifier</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            <!-- Combat Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Combat Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="display-6 fw-bold text-success">{{ $player->hp }}/{{ $player->max_hp }}</div>
+                                <small class="text-muted">Hit Points</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="display-6 fw-bold text-primary">{{ $totalAC }}</div>
+                                <small class="text-muted">Armor Class (D&D 2024)</small>
+                                @php
+                                    // Get AC breakdown details
+                                    $equippedArmor = null;
+                                    foreach ($player->equippedItems as $playerItem) {
+                                        if ($playerItem->item && $playerItem->item->type === 'armor') {
+                                            $equippedArmor = $playerItem->item;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    $baseAC = 10;
+                                    $dexModifier = $player->getStatModifier('dex');
+                                    $armorType = 'unarmored';
+                                    $maxDexModifier = null;
+                                    
+                                    if ($equippedArmor) {
+                                        $armorType = $equippedArmor->getArmorType() ?? 'light';
+                                        $baseAC = $equippedArmor->ac_bonus ?? 11;
+                                        switch ($armorType) {
+                                            case 'medium': $maxDexModifier = 2; break;
+                                            case 'heavy': $maxDexModifier = 0; break;
+                                            default: $maxDexModifier = null; break;
+                                        }
+                                    }
+                                    
+                                    $effectiveDexModifier = $maxDexModifier !== null ? min($dexModifier, $maxDexModifier) : $dexModifier;
+                                @endphp
+                                <div class="small text-muted mt-1">
+                                    @if($equippedArmor)
+                                        {{ ucfirst($armorType) }} Armor: {{ $baseAC }}
+                                        @if($effectiveDexModifier > 0)
+                                            + {{ $effectiveDexModifier }} (Dex
+                                            @if($maxDexModifier !== null && $dexModifier > $maxDexModifier)
+                                                , max {{ $maxDexModifier }}
+                                            @endif
+                                            )
+                                        @elseif($effectiveDexModifier < 0)
+                                            {{ $effectiveDexModifier }} (Dex)
+                                        @endif
+                                    @else
+                                        Unarmored: 10 + {{ $dexModifier }} (Dex)
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <hr>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="fw-bold">{{ $player->level }}</div>
+                                    <small class="text-muted">Level</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold">{{ $player->experience }}</div>
+                                    <small class="text-muted">XP</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold">{{ $player->persistent_currency }}</div>
+                                    <small class="text-muted">Gold</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Character Info -->
+        <div class="col-lg-4">
+            <!-- Inventory -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Inventory</h3>
+                </div>
+                <div class="card-body">
+                    <div class="inventory-tabs">
+                        <ul class="nav nav-pills nav-fill mb-3" id="inventory-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="weapons-tab" data-bs-toggle="pill" data-bs-target="#weapons" type="button" role="tab">
+                                    Weapons <span class="badge bg-secondary ms-1">{{ $inventory['weapons']->count() }}</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="armor-tab" data-bs-toggle="pill" data-bs-target="#armor" type="button" role="tab">
+                                    Armor <span class="badge bg-secondary ms-1">{{ $inventory['armor']->count() }}</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="accessories-tab" data-bs-toggle="pill" data-bs-target="#accessories" type="button" role="tab">
+                                    Accessories <span class="badge bg-secondary ms-1">{{ $inventory['accessories']->count() }}</span>
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="inventory-content" style="max-height: 400px; overflow-y: auto;">
+                            @foreach(['weapons', 'armor', 'accessories'] as $category)
+                                <div class="tab-pane fade {{ $category === 'weapons' ? 'show active' : '' }}" id="{{ $category }}" role="tabpanel">
+                                    @if($inventory[$category]->count() > 0)
+                                        @foreach($inventory[$category] as $playerItem)
+                                            <div class="inventory-item mb-2 p-2 border rounded {{ $playerItem->item->getRarityColor() }}" data-item-id="{{ $playerItem->id }}">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <div class="fw-bold">{{ $playerItem->item->name }}</div>
+                                                        <small class="text-muted">{{ ucfirst($playerItem->item->rarity) }} {{ ucfirst($playerItem->item->type) }}</small>
+                                                        @if($playerItem->item->stats_modifiers)
+                                                            <div class="small">
+                                                                @foreach($playerItem->item->stats_modifiers as $stat => $bonus)
+                                                                    @if($bonus != 0)
+                                                                        <span class="me-2">{{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}</span>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+                                                        @if($playerItem->item->damage_dice)
+                                                            <div class="small">Damage: {{ $playerItem->item->damage_dice }}@if($playerItem->item->damage_bonus > 0)+{{ $playerItem->item->damage_bonus }}@endif</div>
+                                                        @endif
+                                                        @if($playerItem->item->ac_bonus)
+                                                            <div class="small">AC: +{{ $playerItem->item->ac_bonus }}</div>
+                                                        @endif
+                                                        @if($playerItem->quantity > 1)
+                                                            <div class="small">Quantity: {{ $playerItem->quantity }}</div>
+                                                        @endif
+                                                    </div>
+                                                    <div class="ms-2">
+                                                        @if($playerItem->canEquip())
+                                                            <button class="btn btn-sm btn-success equip-item-btn" data-item-id="{{ $playerItem->id }}">
+                                                                Equip
+                                                            </button>
+                                                        @elseif($playerItem->canUnequip())
+                                                            <button class="btn btn-sm btn-warning unequip-item-btn" data-item-id="{{ $playerItem->id }}">
+                                                                Unequip
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="text-center text-muted py-3">
+                                            <i class="fas fa-box-open fa-2x mb-2"></i>
+                                            <div>No {{ $category }} in inventory</div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Character Details -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Character Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="character-portrait text-center mb-3">
+                        <div class="character-avatar bg-light rounded-circle d-inline-flex align-items-center justify-content-center" 
+                             style="width: 80px; height: 80px;">
+                            <i class="fas fa-user fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                    <dl class="row">
+                        <dt class="col-sm-4">Name:</dt>
+                        <dd class="col-sm-8">{{ $player->character_name }}</dd>
+                        
+                        <dt class="col-sm-4">Level:</dt>
+                        <dd class="col-sm-8">{{ $player->level }}</dd>
+                        
+                        <dt class="col-sm-4">Experience:</dt>
+                        <dd class="col-sm-8">{{ $player->experience }} / {{ $player->calculateExperienceToNextLevel() }}</dd>
+                        
+                        <dt class="col-sm-4">Gold:</dt>
+                        <dd class="col-sm-8">{{ number_format($player->persistent_currency) }}</dd>
+                        
+                        @if($player->hasUnallocatedStatPoints())
+                            <dt class="col-sm-4">Stat Points:</dt>
+                            <dd class="col-sm-8"><span class="badge bg-warning">{{ $player->unallocated_stat_points }} available</span></dd>
+                        @endif
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Equipment Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Equipment Summary</h3>
+                </div>
+                <div class="card-body">
+                    <div class="equipment-summary">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ collect($equipment)->filter()->count() }}</div>
+                                    <small class="text-muted">Items Equipped</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ count($equipmentSlots) - collect($equipment)->filter()->count() }}</div>
+                                    <small class="text-muted">Empty Slots</small>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <h6 class="mb-2">Equipment Bonuses:</h6>
+                        <div class="row g-1 text-sm">
+                            @foreach($equipmentBonuses as $stat => $bonus)
+                                @if($bonus != 0)
+                                    <div class="col-6">
+                                        <span class="text-{{ $bonus > 0 ? 'success' : 'danger' }}">
+                                            {{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
+                                        </span>
+                                    </div>
+                                @endif
+                            @endforeach
+                            @if($equipmentAC > 0)
+                                <div class="col-6">
+                                    <span class="text-success">AC: +{{ $equipmentAC }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gender Change Modal -->
+<div class="modal fade" id="genderChangeModal" tabindex="-1" aria-labelledby="genderChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="genderChangeModalLabel">Change Character Gender</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-3">Choose your character's gender:</p>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <button class="btn btn-outline-primary w-100 gender-option {{ $player->gender === 'male' ? 'active' : '' }}" 
+                                data-gender="male" onclick="selectGender('male')">
+                            <img src="{{ asset('img/player_male.png') }}" alt="Male" class="d-block mx-auto mb-2" style="width: 60px; height: 60px; object-fit: cover;">
+                            Male
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-outline-primary w-100 gender-option {{ $player->gender === 'female' ? 'active' : '' }}" 
+                                data-gender="female" onclick="selectGender('female')">
+                            <img src="{{ asset('img/player_female.png') }}" alt="Female" class="d-block mx-auto mb-2" style="width: 60px; height: 60px; object-fit: cover;">
+                            Female
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmGenderBtn" onclick="changeGender()">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stat Allocation Modal -->
+@if($player->hasUnallocatedStatPoints())
+<div class="modal fade" id="statAllocationModal" tabindex="-1" aria-labelledby="statAllocationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statAllocationModalLabel">Allocate Stat Points</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('game.allocate-stats') }}">
+                @csrf
+                <div class="modal-body">
+                    <p>You have <strong>{{ $player->unallocated_stat_points }}</strong> stat points to allocate.</p>
+                    
+                    @foreach(['str' => 'Strength', 'dex' => 'Dexterity', 'con' => 'Constitution', 'int' => 'Intelligence', 'wis' => 'Wisdom', 'cha' => 'Charisma'] as $stat => $name)
+                        <div class="row align-items-center mb-3">
+                            <div class="col-4">
+                                <label for="{{ $stat }}_points" class="form-label">{{ $name }}</label>
+                            </div>
+                            <div class="col-4">
+                                <span class="fw-bold">{{ $player->getAttribute($stat) }}</span>
+                                <span class="text-muted">→</span>
+                                <span class="fw-bold total-{{ $stat }}">{{ $player->getAttribute($stat) }}</span>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group input-group-sm">
+                                    <button type="button" class="btn btn-outline-secondary btn-stat-decrease" data-stat="{{ $stat }}">-</button>
+                                    <input type="number" class="form-control text-center stat-input" 
+                                           id="{{ $stat }}_points" name="{{ $stat }}_points" 
+                                           value="0" min="0" max="{{ $player->unallocated_stat_points }}" readonly>
+                                    <button type="button" class="btn btn-outline-secondary btn-stat-increase" data-stat="{{ $stat }}">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                    
+                    <div class="alert alert-info">
+                        <strong>Remaining Points:</strong> <span id="remaining-points">{{ $player->unallocated_stat_points }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="allocate-btn" disabled onclick="submitStatAllocation()">Allocate Points</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+<style>
+.equipment-slot {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 80px;
+    transition: border-color 0.2s;
+}
+
+.equipment-slot:hover {
+    border-color: #adb5bd;
+}
+
+.slot-label {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.equipment-item {
+    text-align: center;
+}
+
+.item-name {
+    font-size: 0.875rem;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.empty-slot {
+    text-align: center;
+    color: #6c757d;
+    padding: 8px 0;
+}
+
+.stat-block {
+    background-color: var(--bs-light);
+    transition: background-color 0.2s;
+}
+
+.stat-block:hover {
+    background-color: var(--bs-gray-100);
+}
+
+.stat-breakdown {
+    font-size: 0.875rem;
+}
+
+.base-stat {
+    color: #6c757d;
+}
+
+.equipment-bonus {
+    font-weight: bold;
+    margin: 0 4px;
+}
+
+.total-stat {
+    font-size: 1.1em;
+}
+
+.stat-modifier {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #495057;
+}
+
+.dark .equipment-slot {
+    border-color: var(--border-color);
+}
+
+.dark .stat-block {
+    background-color: var(--bg-accent);
+}
+
+.dark .stat-block:hover {
+    background-color: var(--bg-secondary);
+}
+
+/* Character Equipment Display Styles */
+.character-equipment-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.equipment-slot-positioned {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.equipment-slot-positioned:hover {
+    transform: scale(1.05) !important;
+    z-index: 10;
+}
+
+.equipment-item-mini {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #28a745;
+    border-radius: 6px;
+    padding: 4px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.equipment-item-mini:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.equipment-item-mini.common {
+    border-color: #6c757d;
+}
+
+.equipment-item-mini.uncommon {
+    border-color: #28a745;
+}
+
+.equipment-item-mini.rare {
+    border-color: #007bff;
+}
+
+.equipment-item-mini.epic {
+    border-color: #6f42c1;
+}
+
+.equipment-item-mini.legendary {
+    border-color: #fd7e14;
+}
+
+.item-name-mini {
+    font-size: 0.7rem;
+    font-weight: bold;
+    line-height: 1.1;
+    word-wrap: break-word;
+    color: #333;
+}
+
+.empty-slot-mini {
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px dashed #dee2e6;
+    border-radius: 6px;
+    padding: 4px;
+    text-align: center;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-slot-mini:hover {
+    border-color: #adb5bd;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.empty-slot-mini i {
+    font-size: 0.9rem;
+}
+
+.dark .character-equipment-container {
+    background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+}
+
+.dark .equipment-item-mini {
+    background: rgba(33, 37, 41, 0.9);
+    color: #f8f9fa;
+}
+
+.dark .item-name-mini {
+    color: #f8f9fa;
+}
+
+.dark .empty-slot-mini {
+    background: rgba(33, 37, 41, 0.6);
+    border-color: #495057;
+    color: #adb5bd;
+}
+
+.dark .empty-slot-mini:hover {
+    background: rgba(33, 37, 41, 0.8);
+    border-color: #6c757d;
+}
+</style>
+
+<script>
+// Stat allocation functionality
+let allocatedPoints = {
+    str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const maxPoints = {{ $player->unallocated_stat_points }};
+    let remainingPoints = maxPoints;
+
+    const baseStat = {
+        str: {{ $player->str }},
+        dex: {{ $player->dex }},
+        con: {{ $player->con }},
+        int: {{ $player->int }},
+        wis: {{ $player->wis }},
+        cha: {{ $player->cha }}
+    };
+
+    function updateDisplay() {
+        document.getElementById('remaining-points').textContent = remainingPoints;
+        
+        // Update all stat displays
+        Object.keys(allocatedPoints).forEach(stat => {
+            const input = document.getElementById(stat + '_points');
+            const total = document.querySelector('.total-' + stat);
+            
+            input.value = allocatedPoints[stat];
+            total.textContent = baseStat[stat] + allocatedPoints[stat];
+        });
+
+        // Enable/disable allocate button
+        const allocateBtn = document.getElementById('allocate-btn');
+        const hasAllocated = Object.values(allocatedPoints).some(points => points > 0);
+        allocateBtn.disabled = !hasAllocated;
+
+        // Update button states
+        document.querySelectorAll('.btn-stat-increase').forEach(btn => {
+            btn.disabled = remainingPoints <= 0;
+        });
+
+        document.querySelectorAll('.btn-stat-decrease').forEach(btn => {
+            const stat = btn.dataset.stat;
+            btn.disabled = allocatedPoints[stat] <= 0;
+        });
+    }
+
+    // Handle increase buttons
+    document.querySelectorAll('.btn-stat-increase').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const stat = this.dataset.stat;
+            if (remainingPoints > 0) {
+                allocatedPoints[stat]++;
+                remainingPoints--;
+                updateDisplay();
+            }
+        });
+    });
+
+    // Handle decrease buttons
+    document.querySelectorAll('.btn-stat-decrease').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const stat = this.dataset.stat;
+            if (allocatedPoints[stat] > 0) {
+                allocatedPoints[stat]--;
+                remainingPoints++;
+                updateDisplay();
+            }
+        });
+    });
+
+    updateDisplay();
+});
+
+// AJAX stat allocation submission
+function submitStatAllocation() {
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    
+    // Add allocated points
+    Object.keys(allocatedPoints).forEach(stat => {
+        formData.append(stat + '_points', allocatedPoints[stat]);
+    });
+    
+    const allocateBtn = document.getElementById('allocate-btn');
+    allocateBtn.disabled = true;
+    allocateBtn.textContent = 'Allocating...';
+    
+    fetch('{{ route("game.allocate-stats") }}', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            return response.text().then(text => {
+                console.error('Server returned non-JSON response:', text);
+                throw new Error('Server returned HTML instead of JSON. Check server logs for errors.');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Clear the session storage flag so the modal can show again if they level up
+            sessionStorage.removeItem('stat_points_modal_shown_' + {{ auth()->id() }});
+            GameUI.showToast('Stats allocated successfully!', 'success');
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('statAllocationModal')).hide();
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            GameUI.showErrorModal(data.message || 'Failed to allocate stats. Please try again.');
+            allocateBtn.disabled = false;
+            allocateBtn.textContent = 'Allocate Points';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        GameUI.showErrorModal('An error occurred. Please try again.');
+        allocateBtn.disabled = false;
+        allocateBtn.textContent = 'Allocate Points';
+    });
+}
+
+// Equipment functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle equip item buttons
+    document.querySelectorAll('.equip-item-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            equipPlayerItem(itemId);
+        });
+    });
+
+    // Handle unequip item buttons
+    document.querySelectorAll('.unequip-item-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            unequipPlayerItem(itemId);
+        });
+    });
+});
+
+function equipPlayerItem(itemId) {
+    fetch(`{{ url('/game/player-item/equip') }}/${itemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            // Reload the page to update equipment display
+            window.location.reload();
+        } else {
+            showNotification(data.error || 'Failed to equip item', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while equipping the item', 'error');
+    });
+}
+
+function unequipPlayerItem(itemId) {
+    fetch(`{{ url('/game/player-item/unequip') }}/${itemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            // Reload the page to update equipment display
+            window.location.reload();
+        } else {
+            showNotification(data.error || 'Failed to unequip item', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while unequipping the item', 'error');
+    });
+}
+
+function levelUpPlayer() {
+    GameUI.showConfirmModal(
+        'Level Up',
+        'Level up your character? This will increase your level and grant stat points.',
+        function() {
+            fetch('{{ route("game.level-up") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear the session storage flag so the modal can show for the new level up
+                    sessionStorage.removeItem('stat_points_modal_shown_' + {{ auth()->id() }});
+                    GameUI.showToast(`🎉 Level Up! You are now level ${data.new_level}!`, 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    GameUI.showErrorModal(data.message || 'Failed to level up. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                GameUI.showErrorModal('An error occurred while leveling up.');
+            });
+        }
+    );
+}
+
+function showNotification(message, type) {
+    // Create a Bootstrap toast notification
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    // Add toast container if it doesn't exist
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Add the toast
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Show the toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Clean up after toast is hidden
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
+// Gender change functionality
+let selectedGender = '{{ $player->gender }}';
+
+function showGenderModal() {
+    const modal = new bootstrap.Modal(document.getElementById('genderModal'));
+    modal.show();
+}
+
+function selectGender(gender) {
+    selectedGender = gender;
+    
+    // Update button styles
+    document.querySelectorAll('.gender-option').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-primary');
+    });
+    
+    // Highlight selected gender
+    const selectedBtn = document.querySelector(`[data-gender="${gender}"]`);
+    selectedBtn.classList.remove('btn-outline-primary');
+    selectedBtn.classList.add('btn-primary');
+    
+    // Enable confirm button
+    document.getElementById('confirmGenderBtn').disabled = false;
+}
+
+function changeGender() {
+    if (!selectedGender) {
+        showNotification('Please select a gender', 'error');
+        return;
+    }
+    
+    const confirmBtn = document.getElementById('confirmGenderBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Changing...';
+    
+    fetch('{{ route("game.change-gender") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            gender: selectedGender
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Gender changed successfully!', 'success');
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('genderModal')).hide();
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showNotification(data.message || 'Failed to change gender', 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirm';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while changing gender', 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm';
+    });
+}
+</script>
+@endsection

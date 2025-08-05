@@ -6,6 +6,7 @@ use App\Models\Player;
 use App\Models\Adventure;
 use App\Models\CombatLog;
 use App\Models\WeatherEvent;
+use App\Models\Equipment;
 use Illuminate\Support\Facades\Log;
 
 class CombatService
@@ -17,33 +18,64 @@ class CombatService
         $this->weatherService = $weatherService;
     }
 
-    public function initiateCombat(Player $player, array $enemy, $adventure = null): array
+    public function initiateCombat(Player $player, array $enemyData, $adventure = null): array
     {
-        $combatData = [
-            'player' => $this->preparePlayerForCombat($player),
-            'enemy' => $this->prepareEnemyForCombat($enemy),
-            'turn' => 1,
-            'status' => 'active',
-            'weather_effects' => [],
-            'combat_log' => [],
-            'adventure_id' => ($adventure instanceof Adventure) ? $adventure->id : null
-        ];
+        // Check if we have multiple enemies or single enemy
+        if (isset($enemyData['enemies'])) {
+            // Multiple enemies
+            $enemies = [];
+            foreach ($enemyData['enemies'] as $enemy) {
+                $enemies[$enemy['id']] = $this->prepareEnemyForCombat($enemy);
+            }
+            
+            $combatData = [
+                'player' => $this->preparePlayerForCombat($player),
+                'enemies' => $enemies,
+                'enemy_data' => $enemyData,
+                'turn' => 1,
+                'round' => 1,
+                'status' => 'active',
+                'weather_effects' => [],
+                'log' => [],
+                'adventure_id' => ($adventure instanceof Adventure) ? $adventure->id : null,
+                'selected_target' => null
+            ];
+        } else {
+            // Single enemy (backward compatibility)
+            $combatData = [
+                'player' => $this->preparePlayerForCombat($player),
+                'enemy' => $this->prepareEnemyForCombat($enemyData),
+                'turn' => 1,
+                'round' => 1,
+                'status' => 'active',
+                'weather_effects' => [],
+                'log' => [],
+                'adventure_id' => ($adventure instanceof Adventure) ? $adventure->id : null
+            ];
+        }
 
         // Apply weather effects if in adventure
         if ($adventure) {
             $weatherEffects = $this->getWeatherEffects($adventure);
             $combatData['weather_effects'] = $weatherEffects;
-            $this->applyWeatherToInitiative($combatData, $weatherEffects);
         }
 
-        // Determine turn order
-        $playerInitiative = $this->rollInitiative($combatData['player'], $combatData['weather_effects']);
-        $enemyInitiative = $this->rollInitiative($combatData['enemy'], $combatData['weather_effects']);
+        // Determine turn order - player always goes first now
+        $combatData['turn_order'] = ['player'];
+        if (isset($combatData['enemies'])) {
+            foreach ($combatData['enemies'] as $enemyId => $enemy) {
+                if ($enemy['status'] === 'alive') {
+                    $combatData['turn_order'][] = $enemyId;
+                }
+            }
+        } else {
+            $combatData['turn_order'][] = 'enemy';
+        }
         
-        $combatData['turn_order'] = $playerInitiative >= $enemyInitiative ? ['player', 'enemy'] : ['enemy', 'player'];
-        $combatData['current_actor'] = $combatData['turn_order'][0];
+        $combatData['current_actor'] = 'player';
+        $combatData['turn_index'] = 0;
 
-        $this->logCombatEvent($combatData, "Combat initiated! Turn order: " . implode(' → ', $combatData['turn_order']));
+        $this->logCombatEvent($combatData, "Combat initiated!");
         
         if (!empty($combatData['weather_effects'])) {
             $this->logCombatEvent($combatData, "Weather conditions: " . $this->formatWeatherEffects($combatData['weather_effects']));
@@ -123,13 +155,25 @@ class CombatService
 
     private function preparePlayerForCombat(Player $player): array
     {
+        // Load equipment with items for combat calculations
+        $player->load('equipment.item');
+        
         return [
             'name' => $player->character_name,
             'level' => $player->level,
             'max_hp' => $player->max_hp,
             'current_hp' => $player->hp,
-            'ac' => $player->ac,
+            'hp' => $player->hp,
+            'ac' => $player->getTotalAC(), // Use equipment-enhanced AC
             'stats' => [
+                'str' => $player->getTotalStat('str'),
+                'dex' => $player->getTotalStat('dex'),
+                'con' => $player->getTotalStat('con'),
+                'int' => $player->getTotalStat('int'),
+                'wis' => $player->getTotalStat('wis'),
+                'cha' => $player->getTotalStat('cha')
+            ],
+            'base_stats' => [
                 'str' => $player->str,
                 'dex' => $player->dex,
                 'con' => $player->con,
@@ -138,13 +182,14 @@ class CombatService
                 'cha' => $player->cha
             ],
             'modifiers' => [
-                'str' => $player->getStatModifier('str'),
-                'dex' => $player->getStatModifier('dex'),
-                'con' => $player->getStatModifier('con'),
-                'int' => $player->getStatModifier('int'),
-                'wis' => $player->getStatModifier('wis'),
-                'cha' => $player->getStatModifier('cha')
+                'str' => floor(($player->getTotalStat('str') - 10) / 2),
+                'dex' => floor(($player->getTotalStat('dex') - 10) / 2),
+                'con' => floor(($player->getTotalStat('con') - 10) / 2),
+                'int' => floor(($player->getTotalStat('int') - 10) / 2),
+                'wis' => floor(($player->getTotalStat('wis') - 10) / 2),
+                'cha' => floor(($player->getTotalStat('cha') - 10) / 2)
             ],
+            'equipment' => $this->getPlayerWeaponInfo($player),
             'defending' => false,
             'temp_effects' => []
         ];
@@ -154,10 +199,18 @@ class CombatService
     {
         $baseEnemy = [
             'name' => $enemy['name'] ?? 'Unknown Enemy',
+            'type' => $enemy['type'] ?? 'Monster',
             'level' => $enemy['level'] ?? 1,
             'max_hp' => $enemy['hp'] ?? 20,
             'current_hp' => $enemy['hp'] ?? 20,
+            'hp' => $enemy['hp'] ?? 20,
+            'health' => $enemy['hp'] ?? 20,
+            'max_health' => $enemy['hp'] ?? 20,
             'ac' => $enemy['ac'] ?? 12,
+            'str' => $enemy['str'] ?? 12,
+            'int' => $enemy['int'] ?? 10,
+            'wis' => $enemy['wis'] ?? 10,
+            'status' => $enemy['status'] ?? 'alive',
             'stats' => [
                 'str' => $enemy['str'] ?? 12,
                 'dex' => $enemy['dex'] ?? 12,
@@ -315,8 +368,17 @@ class CombatService
 
     private function rollDamage(array $attacker, bool $critical = false, array $weatherEffects = []): int
     {
-        $damageDice = $attacker['damage_dice'] ?? '1d6';
-        $damageBonus = $attacker['damage_bonus'] ?? 0;
+        // Use equipped weapon damage if available, otherwise fallback
+        $weaponInfo = $attacker['equipment'] ?? null;
+        
+        if ($weaponInfo && isset($weaponInfo['damage_dice'])) {
+            $damageDice = $weaponInfo['damage_dice'];
+            $damageBonus = $weaponInfo['damage_bonus'];
+        } else {
+            $damageDice = $attacker['damage_dice'] ?? '1d6';
+            $damageBonus = $attacker['damage_bonus'] ?? 0;
+        }
+        
         $statModifier = $attacker['modifiers']['str'] ?? 0;
         $weatherModifier = $weatherEffects['damage_modifier'] ?? 0;
 
@@ -333,12 +395,46 @@ class CombatService
                 }
             }
             
-            return $damage + $damageBonus + $statModifier + $weatherModifier;
+            return max(1, $damage + $damageBonus + $statModifier + $weatherModifier);
         }
 
         // Fallback
         $baseDamage = rand(1, 6) + $damageBonus + $statModifier + $weatherModifier;
-        return $critical ? $baseDamage * 2 : $baseDamage;
+        return max(1, $critical ? $baseDamage * 2 : $baseDamage);
+    }
+
+    private function getPlayerWeaponInfo(Player $player): array
+    {
+        // Priority order for weapon selection
+        $weaponSlots = [
+            Equipment::SLOT_TWO_HANDED_WEAPON,
+            Equipment::SLOT_WEAPON_1,
+            Equipment::SLOT_BOW,
+            Equipment::SLOT_STAFF,
+            Equipment::SLOT_WAND
+        ];
+
+        foreach ($weaponSlots as $slot) {
+            $weapon = $player->getEquippedItem($slot);
+            if ($weapon && $weapon->item) {
+                return [
+                    'name' => $weapon->item->name,
+                    'damage_dice' => $weapon->item->damage_dice ?? '1d6',
+                    'damage_bonus' => $weapon->item->damage_bonus ?? 0,
+                    'slot' => $slot,
+                    'durability' => $weapon->getDurabilityPercentage()
+                ];
+            }
+        }
+
+        // No weapon equipped - unarmed combat
+        return [
+            'name' => 'Unarmed',
+            'damage_dice' => '1d4',
+            'damage_bonus' => 0,
+            'slot' => 'unarmed',
+            'durability' => 100
+        ];
     }
 
     private function resetTurnEffects(array &$combatData): void
@@ -369,11 +465,12 @@ class CombatService
         return $combatData;
     }
 
-    private function logCombatEvent(array &$combatData, string $message): void
+    private function logCombatEvent(array &$combatData, string $message, string $type = 'system'): void
     {
-        $combatData['combat_log'][] = [
-            'turn' => $combatData['turn'],
+        $combatData['log'][] = [
             'message' => $message,
+            'type' => $type,
+            'round' => $combatData['round'] ?? 1,
             'timestamp' => now()
         ];
     }

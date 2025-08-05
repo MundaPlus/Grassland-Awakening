@@ -161,7 +161,58 @@ class WeatherService
             }
         }
 
-        return $this->generateSimulatedWeather();
+        return $this->getCyclicWeather();
+    }
+
+    public function getCyclicWeather(): array
+    {
+        // 3-day weather cycle (72 hours)
+        $currentTime = Carbon::now();
+        $cycleLengthHours = 72; // 3 days
+        
+        // Calculate hours since epoch and find position in cycle
+        $hoursSinceEpoch = $currentTime->timestamp / 3600;
+        $cyclePosition = $hoursSinceEpoch % $cycleLengthHours;
+        $dayInCycle = floor($cyclePosition / 24); // 0, 1, or 2
+        
+        // Get current season for seasonal modifiers
+        $currentSeason = $this->getCurrentSeason();
+        
+        // Define 3-day weather pattern that varies by season
+        $weatherPatterns = [
+            'spring' => ['clear', 'rain', 'fog'],
+            'summer' => ['clear', 'storm', 'clear'],
+            'autumn' => ['fog', 'rain', 'clear'],
+            'winter' => ['snow', 'clear', 'blizzard']
+        ];
+        
+        $seasonName = $currentSeason['season'];
+        $pattern = $weatherPatterns[$seasonName] ?? $weatherPatterns['spring'];
+        $selectedWeather = $pattern[$dayInCycle];
+        
+        $weatherData = $this->weatherEffects[$selectedWeather];
+        
+        // Calculate hours remaining in current weather
+        $hoursIntoDay = $cyclePosition % 24;
+        $hoursRemaining = 24 - $hoursIntoDay;
+        
+        return [
+            'type' => $selectedWeather,
+            'name' => $weatherData['name'],
+            'description' => $weatherData['description'],
+            'effects' => $weatherData['combat_effects'],
+            'visibility' => $weatherData['visibility'],
+            'movement_speed' => $weatherData['movement_speed'],
+            'season' => $currentSeason['season'],
+            'seasonal_effects' => $currentSeason['effects'],
+            'cycle_info' => [
+                'day_in_cycle' => $dayInCycle + 1, // 1, 2, or 3 for display
+                'hours_remaining' => round($hoursRemaining, 1),
+                'next_weather' => $pattern[($dayInCycle + 1) % 3],
+                'cycle_pattern' => $pattern
+            ],
+            'duration_hours' => $hoursRemaining
+        ];
     }
 
     public function getCurrentSeason(): array

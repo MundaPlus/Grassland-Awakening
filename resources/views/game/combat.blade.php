@@ -12,11 +12,11 @@
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <h1 class="h3 mb-2 text-danger">⚔️ Combat Encounter</h1>
-                            <p class="text-muted mb-0">{{ $adventure->title }} - {{ $combatData['location'] ?? 'Unknown Location' }}</p>
+                            <p class="text-muted mb-0">{{ $adventure->title }} - {{ $combat_data['location'] ?? 'Unknown Location' }}</p>
                         </div>
                         <div class="col-md-4 text-md-end">
-                            <span class="badge bg-danger fs-6" aria-label="Combat round {{ $combatData['round'] ?? 1 }}">
-                                Round {{ $combatData['round'] ?? 1 }}
+                            <span class="badge bg-danger fs-6" aria-label="Combat round {{ $combat_data['round'] ?? 1 }}">
+                                Round {{ $combat_data['round'] ?? 1 }}
                             </span>
                         </div>
                     </div>
@@ -42,28 +42,6 @@
     </div>
     @endif
 
-    <!-- Combat Log -->
-    @if(isset($combatData['log']) && !empty($combatData['log']))
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="h5 mb-0">Combat Log</h2>
-                </div>
-                <div class="card-body">
-                    <div class="combat-log" id="combatLog" aria-live="polite" aria-label="Combat events">
-                        @foreach(array_slice($combatData['log'], -5) as $index => $logEntry)
-                        <div class="log-entry mb-2 p-2 rounded {{ $logEntry['type'] === 'player' ? 'bg-success bg-opacity-10' : ($logEntry['type'] === 'enemy' ? 'bg-danger bg-opacity-10' : 'bg-info bg-opacity-10') }}">
-                            <small class="text-muted">Round {{ $logEntry['round'] ?? 'Unknown' }}:</small>
-                            <div>{{ $logEntry['message'] }}</div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
 
     <!-- Combat Status -->
     <div class="row mb-4">
@@ -78,13 +56,18 @@
                         <div class="col-6">
                             <div class="stat-display">
                                 <div class="small text-muted">Health</div>
+                                @php
+                                    $playerHP = $combat_data['player']['hp'] ?? $player->hp;
+                                    $playerMaxHP = $combat_data['player']['max_hp'] ?? $player->max_hp;
+                                @endphp
                                 <div class="progress mb-1" role="progressbar" 
-                                     aria-valuenow="{{ $player->health }}" 
+                                     aria-valuenow="{{ $playerHP }}" 
                                      aria-valuemin="0" 
-                                     aria-valuemax="{{ $player->max_health }}"
-                                     aria-label="Player health {{ $player->health }} out of {{ $player->max_health }}">
-                                    <div class="progress-bar bg-success" style="width: {{ ($player->health / $player->max_health) * 100 }}%">
-                                        {{ $player->health }}/{{ $player->max_health }}
+                                     aria-valuemax="{{ $playerMaxHP }}"
+                                     aria-label="Player health {{ $playerHP }} out of {{ $playerMaxHP }}"
+                                     style="height: 25px;">
+                                    <div class="progress-bar bg-success d-flex align-items-center justify-content-center fw-bold" style="width: {{ $playerMaxHP > 0 ? ($playerHP / $playerMaxHP) * 100 : 0 }}%; font-size: 14px;">
+                                        {{ $playerHP }}/{{ $playerMaxHP }}
                                     </div>
                                 </div>
                             </div>
@@ -97,33 +80,66 @@
                         </div>
                     </div>
                     
-                    <div class="row text-center">
-                        <div class="col-4">
+                    <div class="row text-center mb-3">
+                        <div class="col-2">
                             <div class="stat-mini">
                                 <div class="small text-muted">STR</div>
-                                <div class="fw-bold" aria-label="Strength {{ $player->strength }}">{{ $player->strength }}</div>
+                                <div class="fw-bold" aria-label="Strength {{ $combat_data['player']['stats']['str'] ?? $player->str }}">{{ $combat_data['player']['stats']['str'] ?? $player->str }}</div>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-2">
+                            <div class="stat-mini">
+                                <div class="small text-muted">DEX</div>
+                                <div class="fw-bold" aria-label="Dexterity {{ $combat_data['player']['stats']['dex'] ?? $player->dex }}">{{ $combat_data['player']['stats']['dex'] ?? $player->dex }}</div>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="stat-mini">
+                                <div class="small text-muted">CON</div>
+                                <div class="fw-bold" aria-label="Constitution {{ $combat_data['player']['stats']['con'] ?? $player->con }}">{{ $combat_data['player']['stats']['con'] ?? $player->con }}</div>
+                            </div>
+                        </div>
+                        <div class="col-2">
                             <div class="stat-mini">
                                 <div class="small text-muted">INT</div>
-                                <div class="fw-bold" aria-label="Intelligence {{ $player->intelligence }}">{{ $player->intelligence }}</div>
+                                <div class="fw-bold" aria-label="Intelligence {{ $combat_data['player']['stats']['int'] ?? $player->int }}">{{ $combat_data['player']['stats']['int'] ?? $player->int }}</div>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-2">
                             <div class="stat-mini">
                                 <div class="small text-muted">WIS</div>
-                                <div class="fw-bold" aria-label="Wisdom {{ $player->wisdom }}">{{ $player->wisdom }}</div>
+                                <div class="fw-bold" aria-label="Wisdom {{ $combat_data['player']['stats']['wis'] ?? $player->wis }}">{{ $combat_data['player']['stats']['wis'] ?? $player->wis }}</div>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="stat-mini">
+                                <div class="small text-muted">CHA</div>
+                                <div class="fw-bold" aria-label="Charisma {{ $combat_data['player']['stats']['cha'] ?? $player->cha }}">{{ $combat_data['player']['stats']['cha'] ?? $player->cha }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-mini">
+                                <div class="small text-muted">AC</div>
+                                <div class="fw-bold" aria-label="Armor Class {{ $combat_data['player']['ac'] ?? $player->ac }}">{{ $combat_data['player']['ac'] ?? $player->ac }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-mini">
+                                <div class="small text-muted">XP</div>
+                                <div class="fw-bold" aria-label="Experience {{ $player->experience }}">{{ $player->experience }}</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Status Effects -->
-                    @if(isset($combatData['player_effects']) && !empty($combatData['player_effects']))
+                    @if(isset($combat_data['player_effects']) && !empty($combat_data['player_effects']))
                     <div class="status-effects mt-3">
                         <h4 class="small text-muted mb-2">Status Effects:</h4>
                         <div class="d-flex gap-1 flex-wrap">
-                            @foreach($combatData['player_effects'] as $effect)
+                            @foreach($combat_data['player_effects'] as $effect)
                             <span class="badge bg-info" title="{{ $effect['description'] ?? '' }}">
                                 {{ $effect['name'] }}
                                 @if(isset($effect['duration']))
@@ -139,71 +155,123 @@
         </div>
         
         <div class="col-md-6">
-            <!-- Enemy Status -->
+            <!-- Enemies Status -->
             <div class="card h-100">
                 <div class="card-header bg-danger text-white">
-                    <h2 class="h5 mb-0">{{ $combatData['enemy']['name'] ?? 'Unknown Enemy' }}</h2>
+                    <h2 class="h5 mb-0">
+                        @if(isset($combat_data['enemies']))
+                            Enemies ({{ count(array_filter($combat_data['enemies'], fn($e) => $e['status'] === 'alive')) }}/{{ count($combat_data['enemies']) }})
+                        @else
+                            {{ $combat_data['enemy']['name'] ?? $enemy['name'] ?? 'Unknown Enemy' }}
+                        @endif
+                    </h2>
                 </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <div class="stat-display">
-                                <div class="small text-muted">Health</div>
-                                <div class="progress mb-1" role="progressbar" 
-                                     aria-valuenow="{{ $combatData['enemy']['health'] }}" 
-                                     aria-valuemin="0" 
-                                     aria-valuemax="{{ $combatData['enemy']['max_health'] }}"
-                                     aria-label="Enemy health {{ $combatData['enemy']['health'] }} out of {{ $combatData['enemy']['max_health'] }}">
-                                    <div class="progress-bar bg-danger" style="width: {{ ($combatData['enemy']['health'] / $combatData['enemy']['max_health']) * 100 }}%">
-                                        {{ $combatData['enemy']['health'] }}/{{ $combatData['enemy']['max_health'] }}
+                <div class="card-body enemies-container">
+                    @if(isset($combat_data['enemies']))
+                        @foreach($combat_data['enemies'] as $enemyId => $enemyData)
+                            <div class="enemy-card mb-3 {{ $enemyData['status'] === 'dead' ? 'enemy-dead' : '' }} {{ $combat_data['selected_target'] === $enemyId ? 'enemy-selected' : '' }}" 
+                                 data-enemy-id="{{ $enemyId }}" 
+                                 onclick="selectTarget('{{ $enemyId }}')">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="enemy-name flex-grow-1">
+                                        <strong>{{ $enemyData['name'] }}</strong>
+                                        <small class="text-muted d-block">{{ $enemyData['type'] ?? 'Monster' }}</small>
+                                    </div>
+                                    @if($enemyData['status'] === 'alive')
+                                        <div class="target-indicator">
+                                            <i class="fas fa-crosshairs text-danger"></i>
+                                        </div>
+                                    @else
+                                        <div class="status-indicator">
+                                            <i class="fas fa-skull text-muted"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                                
+                                <div class="enemy-health mb-2">
+                                    @php
+                                        $enemyHealth = $enemyData['health'] ?? $enemyData['hp'] ?? 0;
+                                        $enemyMaxHealth = $enemyData['max_health'] ?? $enemyData['max_hp'] ?? 100;
+                                        $healthPercent = $enemyMaxHealth > 0 ? ($enemyHealth / $enemyMaxHealth) * 100 : 0;
+                                    @endphp
+                                    <div class="progress mb-1" style="height: 20px;">
+                                        <div class="progress-bar {{ $enemyData['status'] === 'dead' ? 'bg-secondary' : 'bg-danger' }} d-flex align-items-center justify-content-center fw-bold text-white" 
+                                             style="width: {{ $healthPercent }}%; font-size: 12px;">
+                                            @if($healthPercent > 30)
+                                                {{ $enemyHealth }}/{{ $enemyMaxHealth }}
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ $enemyHealth }}/{{ $enemyMaxHealth }} HP</small>
+                                </div>
+                                
+                                <div class="enemy-stats">
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <small class="text-muted">STR</small>
+                                            <div class="fw-bold small">{{ $enemyData['str'] ?? 10 }}</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-muted">INT</small>
+                                            <div class="fw-bold small">{{ $enemyData['int'] ?? 10 }}</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-muted">WIS</small>
+                                            <div class="fw-bold small">{{ $enemyData['wis'] ?? 10 }}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="stat-display">
-                                <div class="small text-muted">Type</div>
-                                <div class="h6">{{ $combatData['enemy']['type'] ?? 'Monster' }}</div>
+                        @endforeach
+                    @else
+                        <!-- Single Enemy (backward compatibility) -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="stat-display">
+                                    <div class="small text-muted">Health</div>
+                                    @php
+                                        $enemyHealth = $enemy['health'] ?? $enemy['hp'] ?? 100;
+                                        $enemyMaxHealth = $enemy['max_health'] ?? $enemy['max_hp'] ?? 100;
+                                    @endphp
+                                    <div class="progress mb-1" role="progressbar" 
+                                         aria-valuenow="{{ $enemyHealth }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="{{ $enemyMaxHealth }}"
+                                         aria-label="Enemy health {{ $enemyHealth }} out of {{ $enemyMaxHealth }}">
+                                        <div class="progress-bar bg-danger" style="width: {{ $enemyMaxHealth > 0 ? ($enemyHealth / $enemyMaxHealth) * 100 : 0 }}%">
+                                            {{ $enemyHealth }}/{{ $enemyMaxHealth }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-display">
+                                    <div class="small text-muted">Type</div>
+                                    <div class="h6">{{ $combat_data['enemy']['type'] ?? $enemy['type'] ?? 'Monster' }}</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <div class="stat-mini">
-                                <div class="small text-muted">STR</div>
-                                <div class="fw-bold" aria-label="Enemy strength {{ $combatData['enemy']['strength'] }}">{{ $combatData['enemy']['strength'] }}</div>
+                        
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="stat-mini">
+                                    <div class="small text-muted">STR</div>
+                                    <div class="fw-bold" aria-label="Enemy strength {{ $combat_data['enemy']['strength'] ?? $enemy['str'] ?? 10 }}">{{ $combat_data['enemy']['strength'] ?? $enemy['str'] ?? 10 }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-mini">
+                                    <div class="small text-muted">INT</div>
+                                    <div class="fw-bold" aria-label="Enemy intelligence {{ $combat_data['enemy']['intelligence'] ?? $enemy['int'] ?? 10 }}">{{ $combat_data['enemy']['intelligence'] ?? $enemy['int'] ?? 10 }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-mini">
+                                    <div class="small text-muted">WIS</div>
+                                    <div class="fw-bold" aria-label="Enemy wisdom {{ $combat_data['enemy']['wisdom'] ?? $enemy['wis'] ?? 10 }}">{{ $combat_data['enemy']['wisdom'] ?? $enemy['wis'] ?? 10 }}</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-4">
-                            <div class="stat-mini">
-                                <div class="small text-muted">INT</div>
-                                <div class="fw-bold" aria-label="Enemy intelligence {{ $combatData['enemy']['intelligence'] }}">{{ $combatData['enemy']['intelligence'] }}</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="stat-mini">
-                                <div class="small text-muted">WIS</div>
-                                <div class="fw-bold" aria-label="Enemy wisdom {{ $combatData['enemy']['wisdom'] }}">{{ $combatData['enemy']['wisdom'] }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Enemy Status Effects -->
-                    @if(isset($combatData['enemy_effects']) && !empty($combatData['enemy_effects']))
-                    <div class="status-effects mt-3">
-                        <h4 class="small text-muted mb-2">Status Effects:</h4>
-                        <div class="d-flex gap-1 flex-wrap">
-                            @foreach($combatData['enemy_effects'] as $effect)
-                            <span class="badge bg-warning text-dark" title="{{ $effect['description'] ?? '' }}">
-                                {{ $effect['name'] }}
-                                @if(isset($effect['duration']))
-                                ({{ $effect['duration']}})
-                                @endif
-                            </span>
-                            @endforeach
-                        </div>
-                    </div>
                     @endif
                 </div>
             </div>
@@ -211,19 +279,29 @@
     </div>
 
     <!-- Combat Actions -->
-    @if($combatData['status'] === 'active')
+    @if($combat_data['status'] === 'active')
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h2 class="h5 mb-0">Choose Your Action</h2>
+                    @if(isset($combat_data['enemies']))
+                        <small class="text-muted">
+                            @if($combat_data['selected_target'])
+                                Target: {{ $combat_data['enemies'][$combat_data['selected_target']]['name'] ?? 'Unknown' }}
+                            @else
+                                Select a target first
+                            @endif
+                        </small>
+                    @endif
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
                             <button type="button" class="btn btn-danger btn-lg w-100 h-100" 
                                     onclick="performAction('attack')"
-                                    aria-label="Attack the enemy">
+                                    aria-label="Attack the enemy"
+                                    {{ isset($combat_data['enemies']) && !$combat_data['selected_target'] ? 'disabled' : '' }}>
                                 <div>
                                     <i class="fas fa-sword fa-2x mb-2" aria-hidden="true"></i>
                                     <div class="h6">Attack</div>
@@ -254,13 +332,13 @@
                             </button>
                         </div>
                         <div class="col-md-3">
-                            <button type="button" class="btn btn-secondary btn-lg w-100 h-100" 
-                                    onclick="performAction('flee')"
-                                    aria-label="Attempt to flee from combat">
+                            <button type="button" class="btn btn-success btn-lg w-100 h-100" 
+                                    onclick="performAction('use_item')"
+                                    aria-label="Use an item">
                                 <div>
-                                    <i class="fas fa-running fa-2x mb-2" aria-hidden="true"></i>
-                                    <div class="h6">Flee</div>
-                                    <small class="text-muted">Attempt to escape</small>
+                                    <i class="fas fa-flask fa-2x mb-2" aria-hidden="true"></i>
+                                    <div class="h6">Use Item</div>
+                                    <small class="text-muted">Consume an item</small>
                                 </div>
                             </button>
                         </div>
@@ -271,32 +349,60 @@
     </div>
     @endif
 
+    <!-- Combat Log -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Combat Log</h2>
+                </div>
+                <div class="card-body">
+                    <div class="combat-log" id="combatLog" style="max-height: 200px; overflow-y: auto;">
+                        @if(isset($combat_data['log']) && !empty($combat_data['log']))
+                            @foreach(array_slice($combat_data['log'], -10) as $logEntry)
+                                <div class="log-entry mb-1 p-2 rounded {{ ($logEntry['type'] ?? 'info') === 'player' ? 'bg-success bg-opacity-10' : (($logEntry['type'] ?? 'info') === 'enemy' ? 'bg-danger bg-opacity-10' : 'bg-info bg-opacity-10') }}">
+                                    <small class="text-muted">Round {{ $combat_data['round'] ?? 1 }}:</small>
+                                    <div>{{ $logEntry['message'] ?? $logEntry }}</div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="log-entry mb-1 p-2 rounded bg-info bg-opacity-10">
+                                <small class="text-muted">Round {{ $combat_data['round'] ?? 1 }}:</small>
+                                <div>Combat begins! Choose your action.</div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Combat Result -->
-    @if($combatData['status'] === 'victory')
+    @if($combat_data['status'] === 'victory')
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-success" role="alert">
                 <div class="text-center">
                     <i class="fas fa-trophy fa-3x text-warning mb-3" aria-hidden="true"></i>
                     <h3 class="alert-heading">Victory!</h3>
-                    <p class="mb-3">You have defeated {{ $combatData['enemy']['name'] ?? 'the enemy' }}!</p>
+                    <p class="mb-3">You have defeated {{ $combat_data['enemy']['name'] ?? 'the enemy' }}!</p>
                     
-                    @if(isset($combatData['rewards']))
+                    @if(isset($combat_data['rewards']))
                     <div class="rewards mb-3">
                         <h4 class="h6">Rewards Earned:</h4>
                         <div class="d-flex justify-content-center gap-3 flex-wrap">
-                            @if(isset($combatData['rewards']['gold']) && $combatData['rewards']['gold'] > 0)
+                            @if(isset($combat_data['rewards']['gold']) && $combat_data['rewards']['gold'] > 0)
                             <span class="badge bg-warning text-dark fs-6">
-                                <i class="fas fa-coins" aria-hidden="true"></i> {{ $combatData['rewards']['gold'] }} Gold
+                                <i class="fas fa-coins" aria-hidden="true"></i> {{ $combat_data['rewards']['gold'] }} Gold
                             </span>
                             @endif
-                            @if(isset($combatData['rewards']['experience']) && $combatData['rewards']['experience'] > 0)
+                            @if(isset($combat_data['rewards']['experience']) && $combat_data['rewards']['experience'] > 0)
                             <span class="badge bg-info fs-6">
-                                <i class="fas fa-star" aria-hidden="true"></i> {{ $combatData['rewards']['experience'] }} XP
+                                <i class="fas fa-star" aria-hidden="true"></i> {{ $combat_data['rewards']['experience'] }} XP
                             </span>
                             @endif
-                            @if(isset($combatData['rewards']['items']) && !empty($combatData['rewards']['items']))
-                            @foreach($combatData['rewards']['items'] as $item)
+                            @if(isset($combat_data['rewards']['items']) && !empty($combat_data['rewards']['items']))
+                            @foreach($combat_data['rewards']['items'] as $item)
                             <span class="badge bg-success fs-6">
                                 <i class="fas fa-gift" aria-hidden="true"></i> {{ $item }}
                             </span>
@@ -315,14 +421,14 @@
     </div>
     @endif
 
-    @if($combatData['status'] === 'defeat')
+    @if($combat_data['status'] === 'defeat')
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-danger" role="alert">
                 <div class="text-center">
                     <i class="fas fa-skull fa-3x text-danger mb-3" aria-hidden="true"></i>
                     <h3 class="alert-heading">Defeat...</h3>
-                    <p class="mb-3">You have been defeated by {{ $combatData['enemy']['name'] ?? 'the enemy' }}.</p>
+                    <p class="mb-3">You have been defeated by {{ $combat_data['enemy']['name'] ?? 'the enemy' }}.</p>
                     <p class="mb-3">But all is not lost! You can rest and recover, then try again.</p>
                     
                     <div class="d-flex justify-content-center gap-3">
@@ -339,14 +445,14 @@
     </div>
     @endif
 
-    @if($combatData['status'] === 'fled')
+    @if($combat_data['status'] === 'fled')
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-warning" role="alert">
                 <div class="text-center">
                     <i class="fas fa-running fa-3x text-warning mb-3" aria-hidden="true"></i>
                     <h3 class="alert-heading">Escaped!</h3>
-                    <p class="mb-3">You successfully fled from {{ $combatData['enemy']['name'] ?? 'the enemy' }}.</p>
+                    <p class="mb-3">You successfully fled from {{ $combat_data['enemy']['name'] ?? 'the enemy' }}.</p>
                     <p class="mb-3">You can continue your adventure or return to safety.</p>
                     
                     <div class="d-flex justify-content-center gap-3">
@@ -441,10 +547,106 @@
         animation: none;
     }
 }
+
+/* Enemy Cards */
+.enemy-card {
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.enemy-card:hover {
+    border-color: #dc3545;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+    transform: translateY(-2px);
+}
+
+.enemy-card.enemy-selected {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.enemy-card.enemy-dead {
+    opacity: 0.6;
+    cursor: not-allowed;
+    border-color: #6c757d;
+    background: rgba(108, 117, 125, 0.1);
+}
+
+.enemy-card.enemy-dead:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.target-indicator, .status-indicator {
+    font-size: 1.2rem;
+}
+
+.enemies-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
 </style>
 
 <script>
 let actionInProgress = false;
+let selectedTargetId = null;
+
+function selectTarget(enemyId) {
+    // Only allow selection of alive enemies
+    const enemyCard = document.querySelector(`[data-enemy-id="${enemyId}"]`);
+    if (!enemyCard || enemyCard.classList.contains('enemy-dead')) {
+        return;
+    }
+    
+    // Remove previous selection
+    document.querySelectorAll('.enemy-card').forEach(card => {
+        card.classList.remove('enemy-selected');
+    });
+    
+    // Add selection to clicked enemy
+    enemyCard.classList.add('enemy-selected');
+    selectedTargetId = enemyId;
+    
+    // Update action buttons
+    const attackButton = document.querySelector('button[onclick="performAction(\'attack\')"]');
+    if (attackButton) {
+        attackButton.disabled = false;
+    }
+    
+    // Update target display
+    const targetInfo = document.querySelector('.card-header small');
+    if (targetInfo) {
+        const enemyName = enemyCard.querySelector('.enemy-name strong').textContent;
+        targetInfo.innerHTML = `Target: ${enemyName}`;
+    }
+}
+
+// Check if current target is still alive, auto-select next alive enemy if not
+function validateCurrentTarget() {
+    if (!selectedTargetId) return;
+    
+    const currentTargetCard = document.querySelector(`[data-enemy-id="${selectedTargetId}"]`);
+    if (currentTargetCard && currentTargetCard.classList.contains('enemy-dead')) {
+        // Current target is dead, find next alive enemy
+        const aliveEnemies = document.querySelectorAll('.enemy-card:not(.enemy-dead)');
+        if (aliveEnemies.length > 0) {
+            const nextTarget = aliveEnemies[0].getAttribute('data-enemy-id');
+            selectTarget(nextTarget);
+        } else {
+            // No alive enemies, disable attack
+            selectedTargetId = null;
+            const attackButton = document.querySelector('button[onclick="performAction(\'attack\')"]');
+            if (attackButton) {
+                attackButton.disabled = true;
+            }
+        }
+    }
+}
 
 function performAction(action) {
     if (actionInProgress) {
@@ -469,19 +671,38 @@ function performAction(action) {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            action: action
+            action: action,
+            target: selectedTargetId,
+            node: new URLSearchParams(window.location.search).get('node')
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Announce action result to screen readers
-            announceToScreenReader(`Combat action ${action} completed. ${data.message || ''}`);
-            
-            // Reload page to show updated combat state
-            window.location.reload();
+            // Handle different combat outcomes
+            if (data.status === 'death') {
+                // Player died - redirect to village
+                console.log('Player died:', data.message);
+                window.location.href = data.redirect;
+            } else if (data.status === 'victory') {
+                // Player won - redirect to adventure map
+                console.log('Victory!', data.message);
+                window.location.href = data.redirect;
+            } else if (data.redirect) {
+                // Combat ended, redirect
+                window.location.href = data.redirect;
+            } else if (data.reload) {
+                // Combat continues - reload to show updated state
+                window.location.reload();
+            } else {
+                // Default - reload page
+                window.location.reload();
+            }
         } else {
-            alert(data.message || 'Action failed. Please try again.');
+            console.error('Combat action failed:', data.message);
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            }
             
             // Restore button state
             clickedButton.innerHTML = originalContent;
@@ -490,8 +711,7 @@ function performAction(action) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred. Please try again.');
+        console.error('Combat error:', error);
         
         // Restore button state
         clickedButton.innerHTML = originalContent;
@@ -536,21 +756,30 @@ document.addEventListener('keydown', function(e) {
             e.preventDefault();
             performAction('special');
             break;
-        case '4':
-        case 'f':
-        case 'F':
-            e.preventDefault();
-            performAction('flee');
-            break;
     }
 });
 
-// Auto-scroll combat log to bottom
+// Auto-scroll combat log to bottom and restore target selection
 document.addEventListener('DOMContentLoaded', function() {
     const combatLog = document.getElementById('combatLog');
     if (combatLog) {
         combatLog.scrollTop = combatLog.scrollHeight;
     }
+    
+    // Restore target selection from server-side selected target
+    @if(isset($combat_data['selected_target']) && $combat_data['selected_target'])
+        selectTarget('{{ $combat_data['selected_target'] }}');
+    @else
+        // Auto-select first alive enemy if no target selected
+        const firstAliveEnemy = document.querySelector('.enemy-card:not(.enemy-dead)');
+        if (firstAliveEnemy) {
+            const enemyId = firstAliveEnemy.getAttribute('data-enemy-id');
+            selectTarget(enemyId);
+        }
+    @endif
+    
+    // Validate current target on page load
+    validateCurrentTarget();
 });
 </script>
 @endsection
