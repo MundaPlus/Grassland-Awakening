@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Traits\HasObfuscatedId;
 
 class Player extends Model
 {
+    use HasObfuscatedId;
     protected $fillable = [
         'user_id',
         'character_name',
@@ -26,6 +28,7 @@ class Player extends Model
         'wis',
         'cha',
         'unallocated_stat_points',
+        'skill_points',
         'current_road',
         'current_level',
         'current_node_id'
@@ -88,6 +91,7 @@ class Player extends Model
             $this->level++;
             $this->experience -= $experienceNeeded;
             $this->unallocated_stat_points += 2;
+            $this->skill_points += 1; // 1 skill point per level
             $this->max_hp += 5 + $this->getStatModifier('con');
             $this->hp = $this->max_hp;
             $this->save();
@@ -252,63 +256,40 @@ class Player extends Model
     }
 
     /**
-     * Calculate AC according to D&D 2024 rules
+     * Calculate AC correctly by summing all armor pieces
      */
     public function calculateAC(): int
     {
-        $baseAC = 10; // Base AC without armor
+        $baseAC = 10; // Base unarmored AC
         $dexModifier = $this->getStatModifier('dex');
-        $maxDexModifier = null; // No limit by default
         
-        // Check for equipped armor
-        $equippedArmor = $this->getEquippedArmor();
+        // Get all AC bonuses from equipped armor pieces (using PlayerItem system)
+        $totalArmorBonus = 0;
         
-        if ($equippedArmor) {
-            $armorType = $equippedArmor->getArmorType();
+        $armorPieces = $this->equippedItems()
+            ->with('item')
+            ->whereHas('item', function($query) {
+                $query->where('type', 'armor');
+            })
+            ->get();
             
-            switch ($armorType) {
-                case 'light':
-                    // Light armor: Base AC + full Dex modifier
-                    $baseAC = $equippedArmor->ac_bonus ?? 11; // Default leather armor AC
-                    $maxDexModifier = null; // No limit
-                    break;
-                    
-                case 'medium':
-                    // Medium armor: Base AC + Dex modifier (max 2)
-                    $baseAC = $equippedArmor->ac_bonus ?? 12; // Default hide armor AC
-                    $maxDexModifier = 2;
-                    break;
-                    
-                case 'heavy':
-                    // Heavy armor: Base AC only, no Dex modifier
-                    $baseAC = $equippedArmor->ac_bonus ?? 14; // Default ring mail AC
-                    $maxDexModifier = 0;
-                    break;
-                    
-                default:
-                    // Unarmored: 10 + Dex modifier
-                    $baseAC = 10;
-                    $maxDexModifier = null;
-                    break;
+        foreach ($armorPieces as $armorPiece) {
+            if ($armorPiece->item && $armorPiece->item->ac_bonus) {
+                $totalArmorBonus += $armorPiece->item->ac_bonus;
             }
         }
         
-        // Apply Dex modifier with cap
-        $effectiveDexModifier = $dexModifier;
-        if ($maxDexModifier !== null) {
-            $effectiveDexModifier = min($dexModifier, $maxDexModifier);
-        }
-        
-        $totalAC = $baseAC + $effectiveDexModifier;
+        // Calculate total AC: base + dex + armor bonuses + shield + accessories
+        $totalAC = $baseAC + $dexModifier + $totalArmorBonus;
         
         // Add shield bonus
         $shieldBonus = $this->getShieldACBonus();
         $totalAC += $shieldBonus;
         
-        // Add other AC bonuses from accessories/magical items
+        // Add other AC bonuses from accessories
         $totalAC += $this->getOtherACBonuses();
         
-        return $totalAC;
+        return max(1, $totalAC); // Ensure AC is at least 1
     }
 
     /**
@@ -347,7 +328,7 @@ class Player extends Model
      */
     private function getShieldACBonus(): int
     {
-        // Check for equipped shield
+        // Check for equipped shield (using PlayerItem system)
         $shield = $this->equippedItems()
             ->with('item')
             ->whereHas('item', function($query) {
@@ -357,16 +338,6 @@ class Player extends Model
             
         if ($shield && $shield->item) {
             return 2; // Standard shield bonus in D&D 2024
-        }
-        
-        // Check old equipment system
-        $oldShield = $this->equipment()
-            ->with('item')
-            ->where('slot', 'shield')
-            ->first();
-            
-        if ($oldShield && $oldShield->item) {
-            return 2;
         }
         
         return 0;
@@ -379,7 +350,7 @@ class Player extends Model
     {
         $totalBonus = 0;
         
-        // Check accessories and other non-armor AC bonuses
+        // Check accessories and other non-armor AC bonuses (using PlayerItem system)
         $accessories = $this->equippedItems()
             ->with('item')
             ->whereHas('item', function($query) {
@@ -388,20 +359,6 @@ class Player extends Model
             ->get();
             
         foreach ($accessories as $accessory) {
-            if ($accessory->item && $accessory->item->ac_bonus) {
-                $totalBonus += $accessory->item->ac_bonus;
-            }
-        }
-        
-        // Check old equipment system for accessories
-        $oldAccessories = $this->equipment()
-            ->with('item')
-            ->whereHas('item', function($query) {
-                $query->where('type', 'accessory');
-            })
-            ->get();
-            
-        foreach ($oldAccessories as $accessory) {
             if ($accessory->item && $accessory->item->ac_bonus) {
                 $totalBonus += $accessory->item->ac_bonus;
             }
@@ -749,25 +706,22 @@ class Player extends Model
     }
 
     /**
-     * Calculate total AC bonus from equipment
+     * Calculate the actual AC bonus contributed by equipment (for display purposes)
+     * This returns how much AC equipment adds beyond the base 10 + Dex calculation
      */
     public function getTotalEquipmentACBonus(): int
     {
-        $totalAC = 0;
+        // Calculate unarmored AC (base 10 + dex)
+        $unarmoredAC = 10 + $this->getStatModifier('dex');
         
-        // Old equipment system
-        foreach ($this->equipment as $equipmentPiece) {
-            $totalAC += $equipmentPiece->getEffectiveACBonus();
-        }
+        // Calculate total AC with all equipment
+        $totalAC = $this->calculateAC();
         
-        // New PlayerItem system
-        foreach ($this->equippedItems as $playerItem) {
-            if ($playerItem->item) {
-                $totalAC += $playerItem->item->ac_bonus ?? 0;
-            }
-        }
+        // The equipment contribution is the difference
+        $equipmentContribution = $totalAC - $unarmoredAC;
         
-        return $totalAC;
+        // Ensure we don't show negative values (some armor might reduce AC vs unarmored)
+        return max(0, $equipmentContribution);
     }
 
     /**

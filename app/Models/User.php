@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Presenters\UserPresenter;
 use App\Models\Traits\HasHashedMediaTrait;
+use App\Traits\HasObfuscatedId;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +19,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
     use HasFactory;
     use HasHashedMediaTrait;
     use HasRoles;
+    use HasObfuscatedId;
     use Notifiable;
     use SoftDeletes;
     use UserPresenter;
@@ -51,6 +53,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
             'last_login' => 'datetime',
             'deleted_at' => 'datetime',
             'social_profiles' => 'array',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -67,5 +70,13 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
     public function player()
     {
         return $this->hasOne(Player::class);
+    }
+
+    /**
+     * Check if the user is an administrator
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin === true;
     }
 }

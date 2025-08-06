@@ -177,6 +177,7 @@ Route::group(['namespace' => 'App\Http\Controllers\Web', 'prefix' => 'game', 'as
     Route::post('/adventure/{id}/combat', 'GameController@processCombatAction')->name('combat-action');
     Route::get('/achievements', 'GameController@achievements')->name('achievements');
     Route::get('/skills', 'GameController@skills')->name('skills');
+    Route::post('/skills/learn/{id}', 'GameController@learnSkill')->name('learn-skill');
     Route::get('/reputation', 'GameController@reputation')->name('reputation');
     Route::get('/character', 'GameController@character')->name('character');
     Route::post('/character/allocate-stats', 'GameController@allocateStats')->name('allocate-stats');
@@ -199,4 +200,52 @@ Route::group(['namespace' => 'App\Http\Controllers\Web', 'prefix' => 'game', 'as
     Route::post('/crafting/craft', 'GameController@craftItem')->name('crafting-craft');
     Route::post('/crafting/upgrade', 'GameController@upgradeItem')->name('crafting-upgrade');
     Route::post('/crafting/learn-recipe', 'GameController@learnRecipe')->name('crafting-learn-recipe');
+});
+
+/*
+*
+* Admin Routes
+* These routes require admin privileges
+* --------------------------------------------------------------------
+*/
+Route::group(['namespace' => 'App\\Http\\Controllers\\Admin', 'prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'admin']], function () {
+    Route::get('/', 'AdminController@dashboard')->name('dashboard');
+    Route::get('/dashboard', 'AdminController@dashboard')->name('dashboard');
+    
+    // User Management
+    Route::get('/users', 'AdminController@users')->name('users');
+    Route::post('/users/{user}/toggle-admin', 'AdminController@toggleAdmin')->name('users.toggle-admin');
+    
+    // Player Management
+    Route::get('/players', 'AdminController@players')->name('players');
+    Route::post('/players/{player}/update-stats', 'AdminController@updatePlayerStats')->name('players.update-stats');
+    Route::post('/players/give-item', 'AdminController@giveItemToPlayer')->name('players.give-item');
+    
+    // Item Management
+    Route::get('/items', 'AdminController@items')->name('items');
+    Route::post('/items/create', 'AdminController@createItem')->name('items.create');
+    Route::delete('/items/{item}', 'AdminController@deleteItem')->name('items.delete');
+    
+    // Adventure Management
+    Route::get('/adventures', 'AdminController@adventures')->name('adventures');
+    
+    // System Settings
+    Route::get('/settings', 'AdminController@settings')->name('settings');
+    
+    // AJAX Routes for Admin Panel
+    Route::post('/cache/clear', 'AdminController@clearCache')->name('cache.clear');
+    Route::get('/players/export', 'AdminController@exportPlayerData')->name('players.export');
+    Route::post('/logs/clean', 'AdminController@cleanLogs')->name('logs.clean');
+    Route::post('/database/backup', 'AdminController@backupDatabase')->name('database.backup');
+    Route::post('/settings/save', 'AdminController@saveSettings')->name('settings.save');
+    Route::post('/players/update', 'AdminController@updatePlayer')->name('players.update');
+    
+    // QA Testing Routes
+    Route::get('/qa-testing', 'AdminController@qaTesting')->name('qa-testing');
+    Route::post('/qa/reset-player', 'AdminController@resetPlayer')->name('qa.reset-player');
+    Route::post('/qa/set-player-level', 'AdminController@setPlayerLevel')->name('qa.set-player-level');
+    Route::post('/qa/give-item', 'AdminController@giveItemToPlayerQA')->name('qa.give-item');
+    Route::post('/qa/set-stats', 'AdminController@setPlayerStatsQA')->name('qa.set-stats');
+    Route::post('/qa/add-currency', 'AdminController@addCurrencyQA')->name('qa.add-currency');
+    Route::post('/qa/clear-inventory', 'AdminController@clearInventoryQA')->name('qa.clear-inventory');
 });

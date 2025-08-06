@@ -28,9 +28,15 @@ class UserLoginSuccess
 
     public function prepareRequestData($request)
     {
-        $data = $request->all();
+        // Only include safe, non-sensitive request data
+        $data = $request->only([
+            'user_agent' => $request->header('User-Agent'),
+            'accept_language' => $request->header('Accept-Language'),
+            'referer' => $request->header('Referer')
+        ]);
 
         $data['last_ip'] = optional(request())->getClientIp();
+        $data['timestamp'] = now();
 
         return $data;
     }

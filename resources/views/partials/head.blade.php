@@ -8,10 +8,10 @@
 <title>{{ $title ?? '' }} | {{ config('app.name') }}</title>
 
 <!-- Favicon -->
-<link rel="apple-touch-icon" sizes="76x76" href="{{ asset('img/favicon.png') }}" />
-<link rel="icon" type="image/png" href="{{ asset('img/favicon.png') }}" />
-<link rel="shortcut icon" href="{{ asset('img/favicon.png') }}" />
-<link rel="icon" type="image/ico" href="{{ asset('img/favicon.png') }}" />
+<link rel="apple-touch-icon" sizes="76x76" href="{{ asset('img/logo.png') }}" />
+<link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}" />
+<link rel="shortcut icon" href="{{ asset('img/logo.png') }}" />
+<link rel="icon" type="image/ico" href="{{ asset('img/logo.png') }}" />
 
 <!-- Meta Includes -->
 @include('frontend.includes.meta')

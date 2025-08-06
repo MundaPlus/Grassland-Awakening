@@ -86,6 +86,44 @@ class SkillService
     }
 
     /**
+     * Learn a skill by spending skill points
+     */
+    public function learnSkillWithPoints(Player $player, Skill $skill): array
+    {
+        // Check if player already has this skill
+        if ($this->hasSkill($player, $skill)) {
+            return ['success' => false, 'message' => 'You already have this skill.'];
+        }
+        
+        // Check requirements
+        if (!$skill->meetsRequirements($player)) {
+            return ['success' => false, 'message' => 'You do not meet the requirements for this skill.'];
+        }
+        
+        // Calculate skill point cost (base cost from skill definition)
+        $cost = $skill->base_cost;
+        
+        // Check if player has enough skill points
+        if ($player->skill_points < $cost) {
+            return ['success' => false, 'message' => "You need {$cost} skill points to learn this skill. You have {$player->skill_points}."];
+        }
+        
+        // Spend skill points and learn skill
+        $player->skill_points -= $cost;
+        $player->save();
+        
+        // Create player skill with level 1
+        PlayerSkill::create([
+            'player_id' => $player->id,
+            'skill_id' => $skill->id,
+            'level' => 1,
+            'experience' => 0
+        ]);
+        
+        return ['success' => true, 'message' => "You learned {$skill->name}! Cost: {$cost} skill points."];
+    }
+
+    /**
      * Check if player has a skill
      */
     public function hasSkill(Player $player, Skill $skill): bool

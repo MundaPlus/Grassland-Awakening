@@ -1,620 +1,735 @@
 @extends('game.layout')
 
 @section('title', 'Adventures')
+@section('meta_description', 'Embark on epic quests and adventures in Grassland Awakening - explore dungeons, fight monsters, and discover treasures.')
+
+@push('styles')
+<style>
+    /* Full-screen immersive layout */
+    body {
+        overflow: hidden;
+    }
+
+    .adventures-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-image: url('/img/backgrounds/adventures.png');
+        z-index: 1;
+    }
+
+    .adventures-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.2));
+        z-index: 2;
+    }
+
+    .adventures-ui-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 10;
+        pointer-events: none;
+    }
+
+    .adventures-ui-container > * {
+        pointer-events: all;
+    }
+
+    /* Header Panel - Top Center */
+    .adventures-header-panel {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(33, 37, 41, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px 25px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        min-width: 500px;
+    }
+
+    /* Adventures Panel - Center Left */
+    .adventures-panel {
+        position: absolute;
+        top: 150px;
+        left: 20px;
+        width: 45%;
+        height: calc(100vh - 300px);
+        background: rgba(220, 53, 69, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .adventure-tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .adventure-tab {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.7);
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        flex: 1;
+        text-align: center;
+    }
+
+    .adventure-tab.active,
+    .adventure-tab:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .adventures-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    .adventure-item {
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .adventure-item:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: translateY(-2px);
+    }
+
+    .adventure-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .adventure-title {
+        font-weight: bold;
+        font-size: 1rem;
+        flex: 1;
+    }
+
+    .adventure-level {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        padding: 3px 8px;
+        font-size: 0.75rem;
+        margin-left: 10px;
+    }
+
+    .adventure-description {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
+
+    .adventure-rewards {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 0.8rem;
+    }
+
+    .reward-item {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        padding: 2px 6px;
+    }
+
+    .adventure-difficulty {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+
+    .difficulty-easy { background: #28a745; }
+    .difficulty-medium { background: #ffc107; color: #333; }
+    .difficulty-hard { background: #dc3545; }
+    .difficulty-extreme { background: #6f42c1; }
+
+    /* Character Status Panel - Top Right */
+    .character-status-panel {
+        position: absolute;
+        top: 120px;
+        right: 20px;
+        width: 300px;
+        background: rgba(40, 167, 69, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .character-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .stat-item {
+        text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 8px;
+    }
+
+    .stat-value {
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+
+    .stat-label {
+        font-size: 0.8em;
+        opacity: 0.8;
+    }
+
+    .readiness-indicator {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .readiness-good {
+        border: 2px solid #28a745;
+        color: #28a745;
+    }
+
+    .readiness-warning {
+        border: 2px solid #ffc107;
+        color: #ffc107;
+    }
+
+    .readiness-danger {
+        border: 2px solid #dc3545;
+        color: #dc3545;
+    }
+
+    /* Active Quest Panel - Center Right */
+    .active-quest-panel {
+        position: absolute;
+        top: 420px;
+        right: 20px;
+        width: 300px;
+        height: 200px;
+        background: rgba(255, 193, 7, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        color: #333;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .quest-progress {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 5px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    /* Adventure Actions Panel - Bottom Right */
+    .adventure-actions-panel {
+        position: absolute;
+        bottom: 100px;
+        right: 20px;
+        width: 300px;
+        background: rgba(23, 162, 184, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .adventure-btn {
+        background: linear-gradient(135deg, #495057, #6c757d);
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        margin: 5px 0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        text-decoration: none;
+        display: block;
+        width: 100%;
+        font-size: 0.85rem;
+        text-align: center;
+    }
+
+    .adventure-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .adventure-btn.primary { background: linear-gradient(135deg, #007bff, #0056b3); }
+    .adventure-btn.success { background: linear-gradient(135deg, #28a745, #1e7e34); }
+    .adventure-btn.warning { background: linear-gradient(135deg, #ffc107, #e0a800); }
+    .adventure-btn.danger { background: linear-gradient(135deg, #dc3545, #c82333); }
+
+    /* Quick Actions Panel - Bottom Center */
+    .quick-actions-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(33, 37, 41, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .dashboard-btn {
+        background: linear-gradient(135deg, #495057, #6c757d);
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        margin: 5px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .dashboard-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        color: white;
+    }
+
+    .dashboard-btn.primary { background: linear-gradient(135deg, #007bff, #0056b3); }
+    .dashboard-btn.success { background: linear-gradient(135deg, #28a745, #1e7e34); }
+    .dashboard-btn.warning { background: linear-gradient(135deg, #ffc107, #e0a800); }
+    .dashboard-btn.danger { background: linear-gradient(135deg, #dc3545, #c82333); }
+
+    /* Custom Scrollbar */
+    .adventures-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .adventures-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+
+    .adventures-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+    }
+
+    .adventures-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .adventures-panel {
+            width: 40%;
+        }
+
+        .character-status-panel, .active-quest-panel, .adventure-actions-panel {
+            width: 250px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .adventures-panel {
+            left: 10px;
+            right: 10px;
+            width: auto;
+            height: calc(100vh - 260px);
+        }
+
+        .character-status-panel, .active-quest-panel, .adventure-actions-panel {
+            display: none;
+        }
+
+        .adventures-header-panel {
+            left: 10px;
+            right: 10px;
+            transform: none;
+            min-width: auto;
+        }
+    }
+</style>
+@endpush
 
 @section('content')
-<div class="container-fluid">
-    <!-- Adventures Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-success">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h1 class="h3 mb-2">Available Adventures</h1>
-                            <p class="text-muted mb-0">Explore the world and discover new challenges</p>
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#generateAdventureModal" aria-label="Generate new adventure">
-                                <i class="fas fa-plus" aria-hidden="true"></i> Generate Adventure
-                            </button>
-                        </div>
+<!-- Adventures Background -->
+<div class="adventures-background"></div>
+<div class="adventures-overlay"></div>
+
+<!-- Adventures UI Overlay System -->
+<div class="adventures-ui-container">
+    <!-- Header Panel - Top Center -->
+    <div class="adventures-header-panel">
+        <h1 class="mb-1">🗺️ Adventures & Quests</h1>
+        <div class="small">Choose your next adventure and embark on epic journeys</div>
+    </div>
+
+    <!-- Adventures Panel - Center Left -->
+    <div class="adventures-panel">
+        <div class="mb-2">
+            <h2 class="h6 mb-2">⚔️ Available Adventures</h2>
+        </div>
+
+        <!-- Adventure Tabs -->
+        <div class="adventure-tabs">
+            <button class="adventure-tab active" data-category="dungeons">🏰 Dungeons</button>
+            <button class="adventure-tab" data-category="exploration">🌲 Exploration</button>
+            <button class="adventure-tab" data-category="quests">📜 Quests</button>
+        </div>
+
+        <!-- Adventures Content -->
+        <div class="adventures-content">
+            <!-- Dungeons -->
+            <div class="adventure-category" data-category="dungeons">
+                <div class="adventure-item" onclick="selectAdventure('goblin-cave')">
+                    <div class="adventure-difficulty difficulty-easy">E</div>
+                    <div class="adventure-header">
+                        <div class="adventure-title">🏴‍☠️ Goblin Cave</div>
+                        <div class="adventure-level">Level 1-3</div>
+                    </div>
+                    <div class="adventure-description">
+                        A small cave system inhabited by goblins. Perfect for new adventurers to test their skills.
+                    </div>
+                    <div class="adventure-rewards">
+                        <div class="reward-item">💰 50-100 Gold</div>
+                        <div class="reward-item">🎒 Basic Loot</div>
+                        <div class="reward-item">⭐ 25 XP</div>
+                    </div>
+                </div>
+
+                <div class="adventure-item" onclick="selectAdventure('dark-forest')">
+                    <div class="adventure-difficulty difficulty-medium">M</div>
+                    <div class="adventure-header">
+                        <div class="adventure-title">🌑 Dark Forest Depths</div>
+                        <div class="adventure-level">Level 3-5</div>
+                    </div>
+                    <div class="adventure-description">
+                        Ancient trees hide dangerous creatures and forgotten treasures in this mysterious woodland.
+                    </div>
+                    <div class="adventure-rewards">
+                        <div class="reward-item">💰 100-200 Gold</div>
+                        <div class="reward-item">🎒 Rare Items</div>
+                        <div class="reward-item">⭐ 50 XP</div>
+                    </div>
+                </div>
+
+                <div class="adventure-item" onclick="selectAdventure('dragon-lair')">
+                    <div class="adventure-difficulty difficulty-extreme">X</div>
+                    <div class="adventure-header">
+                        <div class="adventure-title">🐉 Ancient Dragon's Lair</div>
+                        <div class="adventure-level">Level 8+</div>
+                    </div>
+                    <div class="adventure-description">
+                        Face the legendary dragon that has terrorized the lands for centuries. Only the bravest dare enter.
+                    </div>
+                    <div class="adventure-rewards">
+                        <div class="reward-item">💰 1000+ Gold</div>
+                        <div class="reward-item">🎒 Legendary Items</div>
+                        <div class="reward-item">⭐ 500 XP</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exploration -->
+            <div class="adventure-category" data-category="exploration" style="display: none;">
+                <div class="adventure-item" onclick="selectAdventure('meadow-exploration')">
+                    <div class="adventure-difficulty difficulty-easy">E</div>
+                    <div class="adventure-header">
+                        <div class="adventure-title">🌸 Peaceful Meadows</div>
+                        <div class="adventure-level">Level 1+</div>
+                    </div>
+                    <div class="adventure-description">
+                        Explore the beautiful grasslands surrounding your village. Gather herbs and enjoy nature.
+                    </div>
+                    <div class="adventure-rewards">
+                        <div class="reward-item">🌿 Herbs</div>
+                        <div class="reward-item">⭐ 10 XP</div>
+                    </div>
+                </div>
+
+                <div class="adventure-item" onclick="selectAdventure('mountain-path')">
+                    <div class="adventure-difficulty difficulty-medium">M</div>
+                    <div class="adventure-header">
+                        <div class="adventure-title">⛰️ Mountain Path</div>
+                        <div class="adventure-level">Level 4+</div>
+                    </div>
+                    <div class="adventure-description">
+                        Trek through treacherous mountain paths to discover hidden valleys and ancient ruins.
+                    </div>
+                    <div class="adventure-rewards">
+                        <div class="reward-item">🏺 Artifacts</div>
+                        <div class="reward-item">💎 Gems</div>
+                        <div class="reward-item">⭐ 75 XP</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quests -->
+            <div class="adventure-category" data-category="quests" style="display: none;">
+                <div class="adventure-item" onclick="selectAdventure('merchant-delivery')">
+                    <div class="adventure-difficulty difficulty-easy">E</div>
+                    <div class="adventure-header">
+                        <div class="adventure-title">📦 Merchant's Delivery</div>
+                        <div class="adventure-level">Level 1+</div>
+                    </div>
+                    <div class="adventure-description">
+                        Help the local merchant deliver goods to the neighboring village safely.
+                    </div>
+                    <div class="adventure-rewards">
+                        <div class="reward-item">💰 75 Gold</div>
+                        <div class="reward-item">⭐ 20 XP</div>
+                    </div>
+                </div>
+
+                <div class="adventure-item" onclick="selectAdventure('missing-scholar')">
+                    <div class="adventure-difficulty difficulty-hard">H</div>
+                    <div class="adventure-header">
+                        <div class="adventure-title">🎓 The Missing Scholar</div>
+                        <div class="adventure-level">Level 5+</div>
+                    </div>
+                    <div class="adventure-description">
+                        A renowned scholar has gone missing while researching ancient magic. Find them before it's too late.
+                    </div>
+                    <div class="adventure-rewards">
+                        <div class="reward-item">💰 300 Gold</div>
+                        <div class="reward-item">📚 Spell Tome</div>
+                        <div class="reward-item">⭐ 150 XP</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Current Weather Effects -->
-    @if(isset($weatherEffects) && !empty($weatherEffects))
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-info" role="alert">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-cloud-sun fa-2x me-3" aria-hidden="true"></i>
-                    <div>
-                        <h4 class="alert-heading mb-1">Current Weather Effects</h4>
-                        <p class="mb-0">{{ is_string($weatherEffects) ? $weatherEffects : 'Weather conditions may affect your adventures' }}</p>
-                    </div>
+    <!-- Character Status Panel - Top Right -->
+    <div class="character-status-panel">
+        <div class="mb-3">
+            <h2 class="h6 mb-2">👤 Adventure Readiness</h2>
+            <div class="character-stats">
+                <div class="stat-item">
+                    <div class="stat-value text-success">85/100</div>
+                    <div class="stat-label">Health</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value text-warning">12</div>
+                    <div class="stat-label">Level</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value text-primary">18</div>
+                    <div class="stat-label">Armor</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value text-danger">1d8+3</div>
+                    <div class="stat-label">Damage</div>
                 </div>
             </div>
-        </div>
-    </div>
-    @endif
 
-    <!-- Active Adventures -->
-    @if($activeAdventures->isNotEmpty())
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="h5 mb-0">Active Adventures</h2>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        @foreach($activeAdventures as $adventure)
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card h-100 border-warning adventure-card" role="article" aria-labelledby="adventure-{{ $adventure->id }}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h3 class="h6 mb-0" id="adventure-{{ $adventure->id }}">{{ $adventure->title }}</h3>
-                                        @php
-                                            $progress = round($adventure->getCurrentProgress() * 100);
-                                        @endphp
-                                        @if($progress >= 100)
-                                            <span class="badge bg-success" aria-label="Completed">Completed</span>
-                                        @else
-                                            <span class="badge bg-warning" aria-label="In progress">In Progress</span>
-                                        @endif
-                                    </div>
-                                    <p class="small text-muted mb-2">{{ ucfirst(str_replace('_', ' ', $adventure->road)) }} • {{ ucfirst($adventure->difficulty) }}</p>
-                                    <p class="card-text">{{ Str::limit($adventure->description, 100) }}</p>
-                                    
-                                    <!-- Progress Bar -->
-                                    @php
-                                        $progress = round($adventure->getCurrentProgress() * 100);
-                                    @endphp
-                                    <div class="progress mb-3" role="progressbar" aria-valuenow="{{ $progress }}" aria-valuemin="0" aria-valuemax="100" aria-label="Adventure progress {{ $progress }}%">
-                                        <div class="progress-bar" style="width: {{ $progress }}%">
-                                            {{ $progress }}%
-                                        </div>
-                                    </div>
-
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('game.adventure-map', $adventure->id) }}" class="btn btn-primary btn-sm" style="flex: 2;" aria-label="Continue {{ $adventure->title }}">
-                                            Open Map
-                                        </a>
-                                        <button type="button" class="btn btn-outline-danger btn-sm" style="flex: 1;"
-                                                onclick="abandonAdventure({{ $adventure->id }})"
-                                                aria-label="Abandon {{ $adventure->title }}">
-                                            Abandon
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Available Adventures -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="h5 mb-0">Available Adventures</h2>
-                    <div class="adventure-filters">
-                        <select class="form-select form-select-sm" id="difficultyFilter" onchange="filterAdventures()" aria-label="Filter by difficulty">
-                            <option value="">All Difficulties</option>
-                            <option value="easy">Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
-                            <option value="expert">Expert</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card-body">
-                    @if($availableAdventures->isEmpty())
-                    <div class="text-center py-4">
-                        <i class="fas fa-map fa-3x text-muted mb-3" aria-hidden="true"></i>
-                        <p class="text-muted">No adventures available. Generate new adventures to explore!</p>
-                    </div>
-                    @else
-                    <div class="row" id="adventuresContainer">
-                        @foreach($availableAdventures as $adventure)
-                        <div class="col-md-6 col-lg-4 mb-3 adventure-item" data-difficulty="{{ $adventure->difficulty }}">
-                            <div class="card h-100 adventure-card" role="article" aria-labelledby="adventure-{{ $adventure->id }}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h3 class="h6 mb-0" id="adventure-{{ $adventure->id }}">{{ $adventure->title }}</h3>
-                                        <span class="badge bg-{{ $adventure->difficulty === 'easy' ? 'success' : ($adventure->difficulty === 'medium' ? 'warning' : ($adventure->difficulty === 'hard' ? 'danger' : 'dark')) }}" 
-                                              aria-label="Difficulty {{ $adventure->difficulty }}">
-                                            {{ ucfirst($adventure->difficulty) }}
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="adventure-meta mb-2">
-                                        <small class="text-muted">
-                                            <i class="fas fa-road" aria-hidden="true"></i> {{ $adventure->road_type }}
-                                            <span class="mx-2">•</span>
-                                            <i class="fas fa-clock" aria-hidden="true"></i> {{ $adventure->estimated_duration }} min
-                                        </small>
-                                    </div>
-
-                                    <p class="card-text">{{ Str::limit($adventure->description, 120) }}</p>
-
-                                    <!-- Rewards Preview -->
-                                    <div class="rewards-preview mb-3">
-                                        <h4 class="small text-muted mb-1">Potential Rewards:</h4>
-                                        <div class="d-flex gap-2 flex-wrap">
-                                            @if($adventure->gold_reward > 0)
-                                            <span class="badge bg-warning text-dark" aria-label="Gold reward {{ $adventure->gold_reward }}">
-                                                <i class="fas fa-coins" aria-hidden="true"></i> {{ $adventure->gold_reward }}
-                                            </span>
-                                            @endif
-                                            @if($adventure->experience_reward > 0)
-                                            <span class="badge bg-info" aria-label="Experience reward {{ $adventure->experience_reward }}">
-                                                <i class="fas fa-star" aria-hidden="true"></i> {{ $adventure->experience_reward }} XP
-                                            </span>
-                                            @endif
-                                            @if($adventure->item_rewards)
-                                            <span class="badge bg-success" aria-label="Item rewards available">
-                                                <i class="fas fa-gift" aria-hidden="true"></i> Items
-                                            </span>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <!-- Requirements -->
-                                    @if($adventure->level_requirement > 1)
-                                    <div class="requirements mb-3">
-                                        <small class="text-muted">
-                                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i> 
-                                            Requires level {{ $adventure->level_requirement }}
-                                        </small>
-                                    </div>
-                                    @endif
-
-                                    <div class="row g-2">
-                                        <div class="col-8">
-                                            @if($player->level >= $adventure->level_requirement)
-                                            <button type="button" class="btn btn-success btn-sm w-100" 
-                                                    onclick="startAdventure({{ $adventure->id }})"
-                                                    aria-label="Start {{ $adventure->title }}">
-                                                Start Adventure
-                                            </button>
-                                            @else
-                                            <button type="button" class="btn btn-secondary btn-sm w-100" disabled 
-                                                    aria-label="Level {{ $adventure->level_requirement }} required for {{ $adventure->title }}">
-                                                Level {{ $adventure->level_requirement }} Required
-                                            </button>
-                                            @endif
-                                        </div>
-                                        <div class="col-2">
-                                            <button type="button" class="btn btn-outline-secondary btn-sm w-100" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#adventurePreviewModal{{ $adventure->id }}"
-                                                    aria-label="Preview {{ $adventure->title }}">
-                                                Preview
-                                            </button>
-                                        </div>
-                                        <div class="col-2">
-                                            <button type="button" class="btn btn-outline-danger btn-sm w-100" 
-                                                    onclick="deleteAdventure({{ $adventure->id }})"
-                                                    aria-label="Delete {{ $adventure->title }}">
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                    @endif
-                </div>
+            <div class="readiness-indicator readiness-good">
+                <div class="fw-bold">✅ Ready for Adventure!</div>
+                <div class="small mt-1">Your character is well-prepared for most challenges</div>
             </div>
         </div>
     </div>
 
-    <!-- Completed Adventures -->
-    @if($completedAdventures->isNotEmpty())
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="h5 mb-0">Recently Completed Adventures</h2>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        @foreach($completedAdventures as $adventure)
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card h-100 border-success adventure-card" role="article" aria-labelledby="completed-adventure-{{ $adventure->id }}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h3 class="h6 mb-0" id="completed-adventure-{{ $adventure->id }}">{{ $adventure->title }}</h3>
-                                        @if($adventure->status === 'completed')
-                                            <span class="badge bg-success" aria-label="Completed">✓ Completed</span>
-                                        @else
-                                            <span class="badge bg-danger" aria-label="Failed">✗ Failed</span>
-                                        @endif
-                                    </div>
-                                    <p class="small text-muted mb-2">{{ ucfirst(str_replace('_', ' ', $adventure->road)) }} • {{ ucfirst($adventure->difficulty) }}</p>
-                                    <p class="card-text">{{ Str::limit($adventure->description, 100) }}</p>
-                                    
-                                    <!-- Completion Stats -->
-                                    <div class="completion-stats mb-3">
-                                        @if($adventure->status === 'completed')
-                                            <small class="text-success">
-                                                <i class="fas fa-trophy" aria-hidden="true"></i> Adventure Completed
-                                                @if($adventure->completed_at)
-                                                    <br><i class="fas fa-calendar" aria-hidden="true"></i> {{ $adventure->completed_at->format('M d, Y') }}
-                                                @endif
-                                            </small>
-                                        @else
-                                            <small class="text-danger">
-                                                <i class="fas fa-skull" aria-hidden="true"></i> Adventure Failed
-                                                @if($adventure->completed_at)
-                                                    <br><i class="fas fa-calendar" aria-hidden="true"></i> {{ $adventure->completed_at->format('M d, Y') }}
-                                                @endif
-                                            </small>
-                                        @endif
-                                    </div>
+    <!-- Active Quest Panel - Center Right -->
+    <div class="active-quest-panel">
+        <div class="mb-2">
+            <div class="fw-bold small">🎯 Active Quest</div>
+        </div>
+        <div class="fw-bold mb-2">📦 Merchant's Delivery</div>
+        <div class="small mb-2">
+            Deliver goods safely to Riverside Village. Watch out for bandits on the road!
+        </div>
 
-                                    <div class="row g-2">
-                                        <div class="col-8">
-                                            @if($adventure->status === 'completed')
-                                                <button type="button" class="btn btn-outline-success btn-sm w-100" disabled>
-                                                    ✓ Completed
-                                                </button>
-                                            @else
-                                                <button type="button" class="btn btn-outline-danger btn-sm w-100" disabled>
-                                                    ✗ Failed
-                                                </button>
-                                            @endif
-                                        </div>
-                                        <div class="col-4">
-                                            <button type="button" class="btn btn-outline-info btn-sm w-100" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#adventurePreviewModal{{ $adventure->id }}"
-                                                    aria-label="View {{ $adventure->title }}">
-                                                View
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
+        <div class="quest-progress">
+            <div class="small fw-bold">Progress: 3/5 Checkpoints</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 60%"></div>
             </div>
+            <div class="small mt-1">Next: Cross the Old Bridge</div>
         </div>
     </div>
-    @endif
-</div>
 
-<!-- Generate Adventure Modal -->
-<div class="modal fade" id="generateAdventureModal" tabindex="-1" aria-labelledby="generateAdventureModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{{ route('game.generate-adventure') }}">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title" id="generateAdventureModalLabel">Generate New Adventure</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="adventure_seed" class="form-label">Adventure Seed (Optional)</label>
-                        <input type="text" class="form-control" id="adventure_seed" name="seed" aria-describedby="seedHelp">
-                        <div id="seedHelp" class="form-text">Leave empty for random generation, or enter a seed for reproducible adventures</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="adventure_difficulty" class="form-label">Preferred Difficulty</label>
-                        <select class="form-select" id="adventure_difficulty" name="difficulty" aria-describedby="difficultyHelp">
-                            <option value="">Auto (Based on level)</option>
-                            <option value="easy">Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
-                            @if($player->level >= 10)
-                            <option value="expert">Expert</option>
-                            @endif
-                        </select>
-                        <div id="difficultyHelp" class="form-text">Higher difficulty means better rewards but greater risk</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="road_type" class="form-label">Road Type</label>
-                        <select class="form-select" id="road_type" name="road_type" aria-describedby="roadHelp">
-                            <option value="">Any Road</option>
-                            <option value="forest_path">Forest Path</option>
-                            <option value="mountain_trail">Mountain Trail</option>
-                            <option value="coastal_road">Coastal Road</option>
-                            <option value="desert_route">Desert Route</option>
-                            <option value="river_crossing">River Crossing</option>
-                            <option value="ancient_highway">Ancient Highway</option>
-                        </select>
-                        <div id="roadHelp" class="form-text">Different road types offer unique encounters and challenges</div>
-                    </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle" aria-hidden="true"></i>
-                        <strong>Generation Cost:</strong> 10 gold pieces
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Generate Adventure</button>
-                </div>
-            </form>
+    <!-- Adventure Actions Panel - Bottom Right -->
+    <div class="adventure-actions-panel">
+        <div class="mb-2">
+            <div class="fw-bold small">⚡ Adventure Actions</div>
+        </div>
+
+        <button class="adventure-btn danger" onclick="startSelectedAdventure()">
+            🚀 Start Adventure
+        </button>
+
+        <button class="adventure-btn warning" onclick="continueCurrentQuest()">
+            ⏩ Continue Current Quest
+        </button>
+
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+
+        <a href="{{ route('game.character') }}" class="adventure-btn primary">
+            👤 Check Equipment
+        </a>
+
+        <a href="{{ route('game.inventory') }}" class="adventure-btn warning">
+            🎒 Manage Inventory
+        </a>
+    </div>
+
+    <!-- Quick Actions Panel - Bottom Center -->
+    <div class="quick-actions-panel">
+        <div class="mb-2 text-center text-white">
+            <div class="fw-bold small">Quick Actions</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap justify-content-center">
+            <a href="{{ route('game.character') }}" class="dashboard-btn primary">
+                👤 Character
+            </a>
+            <a href="{{ route('game.inventory') }}" class="dashboard-btn warning">
+                🎒 Inventory
+            </a>
+            <a href="{{ route('game.village') }}" class="dashboard-btn success">
+                🏘️ Village
+            </a>
+            <a href="{{ route('game.skills') }}" class="dashboard-btn primary">
+                🎯 Skills
+            </a>
         </div>
     </div>
 </div>
+@endsection
 
-<!-- Adventure Preview Modals -->
-@foreach($availableAdventures as $adventure)
-<div class="modal fade" id="adventurePreviewModal{{ $adventure->id }}" tabindex="-1" aria-labelledby="adventurePreviewModal{{ $adventure->id }}Label" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="adventurePreviewModal{{ $adventure->id }}Label">{{ $adventure->title }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <h6>Adventure Description</h6>
-                        <p>{{ $adventure->description }}</p>
-                        
-                        @if($adventure->story_hooks)
-                        <h6>Story Elements</h6>
-                        <p class="text-muted">{{ $adventure->story_hooks }}</p>
-                        @endif
-                    </div>
-                    <div class="col-md-4">
-                        <h6>Adventure Details</h6>
-                        <table class="table table-sm">
-                            <tbody>
-                                <tr>
-                                    <td>Difficulty</td>
-                                    <td><span class="badge bg-{{ $adventure->difficulty === 'easy' ? 'success' : ($adventure->difficulty === 'medium' ? 'warning' : ($adventure->difficulty === 'hard' ? 'danger' : 'dark')) }}">{{ ucfirst($adventure->difficulty) }}</span></td>
-                                </tr>
-                                <tr>
-                                    <td>Road Type</td>
-                                    <td>{{ $adventure->road_type }}</td>
-                                </tr>
-                                <tr>
-                                    <td>Duration</td>
-                                    <td>{{ $adventure->estimated_duration }} minutes</td>
-                                </tr>
-                                <tr>
-                                    <td>Level Req.</td>
-                                    <td>{{ $adventure->level_requirement }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <h6>Rewards</h6>
-                        <ul class="list-unstyled">
-                            @if($adventure->gold_reward > 0)
-                            <li><i class="fas fa-coins text-warning" aria-hidden="true"></i> {{ $adventure->gold_reward }} gold</li>
-                            @endif
-                            @if($adventure->experience_reward > 0)
-                            <li><i class="fas fa-star text-info" aria-hidden="true"></i> {{ $adventure->experience_reward }} experience</li>
-                            @endif
-                            @if($adventure->item_rewards)
-                            <li><i class="fas fa-gift text-success" aria-hidden="true"></i> Potential items</li>
-                            @endif
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                @if($player->level >= $adventure->level_requirement)
-                <button type="button" class="btn btn-success" onclick="startAdventure({{ $adventure->id }})" data-bs-dismiss="modal">Start Adventure</button>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-@endforeach
-
-<!-- Completed Adventure Preview Modals -->
-@foreach($completedAdventures as $adventure)
-<div class="modal fade" id="adventurePreviewModal{{ $adventure->id }}" tabindex="-1" aria-labelledby="adventurePreviewModal{{ $adventure->id }}Label" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="adventurePreviewModal{{ $adventure->id }}Label">{{ $adventure->title }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <h6>Adventure Description</h6>
-                        <p>{{ $adventure->description }}</p>
-                        
-                        <h6>Adventure Results</h6>
-                        <div class="result-summary">
-                            @if($adventure->status === 'completed')
-                                <div class="alert alert-success">
-                                    <i class="fas fa-trophy"></i> <strong>Adventure Completed Successfully!</strong>
-                                    @if($adventure->completed_at)
-                                        <br><small>Completed on {{ $adventure->completed_at->format('M j, Y \a\t H:i') }}</small>
-                                    @endif
-                                </div>
-                            @else
-                                <div class="alert alert-danger">
-                                    <i class="fas fa-times-circle"></i> <strong>Adventure Failed</strong>
-                                    @if($adventure->completed_at)
-                                        <br><small>Failed on {{ $adventure->completed_at->format('M j, Y \a\t H:i') }}</small>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                        
-                        @if($adventure->status === 'completed')
-                            <h6>Adventure Statistics</h6>
-                            <ul class="list-unstyled">
-                                <li><strong>Nodes Completed:</strong> {{ count($adventure->completed_nodes ?? []) }}</li>
-                                <li><strong>Progress:</strong> {{ round($adventure->getCurrentProgress() * 100) }}%</li>
-                                @if($adventure->currency_earned > 0)
-                                <li><strong>Gold Earned:</strong> {{ $adventure->currency_earned }}</li>
-                                @endif
-                                @if($adventure->collected_loot)
-                                <li><strong>Items Found:</strong> {{ count($adventure->collected_loot) }}</li>
-                                @endif
-                            </ul>
-                        @endif
-                    </div>
-                    <div class="col-md-4">
-                        <h6>Adventure Details</h6>
-                        <table class="table table-sm">
-                            <tbody>
-                                <tr>
-                                    <td>Difficulty</td>
-                                    <td><span class="badge bg-{{ $adventure->difficulty === 'easy' ? 'success' : ($adventure->difficulty === 'normal' ? 'warning' : ($adventure->difficulty === 'hard' ? 'danger' : 'dark')) }}">{{ ucfirst($adventure->difficulty) }}</span></td>
-                                </tr>
-                                <tr>
-                                    <td>Road</td>
-                                    <td>{{ ucfirst(str_replace('_', ' ', $adventure->road)) }}</td>
-                                </tr>
-                                <tr>
-                                    <td>Status</td>
-                                    <td>
-                                        @if($adventure->status === 'completed')
-                                            <span class="badge bg-success">Completed</span>
-                                        @else
-                                            <span class="badge bg-danger">Failed</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Seed</td>
-                                    <td><code class="small">{{ $adventure->seed }}</code></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-@endforeach
-
+@push('scripts')
 <script>
-function startAdventure(adventureId) {
-    GameUI.showConfirmModal(
-        'Start Adventure',
-        'Start this adventure? You will be committed until it is completed or abandoned.',
-        function() {
-            fetch(`/game/adventures/${adventureId}/start`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    GameUI.showToast('Adventure started successfully!', 'success');
-                    setTimeout(() => {
-                        window.location.href = `/game/adventure/${adventureId}/map`;
-                    }, 1000);
-                } else {
-                    GameUI.showErrorModal(data.message || 'Failed to start adventure. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                GameUI.showErrorModal('An error occurred. Please try again.');
-            });
-        }
-    );
-}
+// Adventure category switching
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.adventure-tab');
+    const categories = document.querySelectorAll('.adventure-category');
 
-function abandonAdventure(adventureId) {
-    GameUI.showConfirmModal(
-        'Abandon Adventure',
-        'Are you sure you want to abandon this adventure? Progress will be lost.',
-        function() {
-            fetch(`/game/adventures/${adventureId}/abandon`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    GameUI.showToast('Adventure abandoned', 'info');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    GameUI.showErrorModal(data.message || 'Failed to abandon adventure. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                GameUI.showErrorModal('An error occurred. Please try again.');
-            });
-        }
-    );
-}
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetCategory = this.getAttribute('data-category');
 
-function deleteAdventure(adventureId) {
-    GameUI.showConfirmModal(
-        'Delete Adventure',
-        'Are you sure you want to delete this adventure? This action cannot be undone.',
-        function() {
-            fetch(`/game/adventures/${adventureId}/abandon`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    GameUI.showToast('Adventure deleted', 'info');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    GameUI.showErrorModal(data.message || 'Failed to delete adventure. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                GameUI.showErrorModal('An error occurred. Please try again.');
-            });
-        }
-    );
-}
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
 
-function filterAdventures() {
-    const filter = document.getElementById('difficultyFilter').value;
-    const adventures = document.querySelectorAll('.adventure-item');
-    
-    adventures.forEach(adventure => {
-        if (filter === '' || adventure.dataset.difficulty === filter) {
-            adventure.style.display = '';
-        } else {
-            adventure.style.display = 'none';
-        }
+            // Show target category, hide others
+            categories.forEach(cat => {
+                if (cat.getAttribute('data-category') === targetCategory) {
+                    cat.style.display = 'block';
+                } else {
+                    cat.style.display = 'none';
+                }
+            });
+        });
     });
+});
+
+let selectedAdventureId = null;
+
+function selectAdventure(adventureId) {
+    selectedAdventureId = adventureId;
+
+    // Remove previous selections
+    document.querySelectorAll('.adventure-item').forEach(item => {
+        item.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+    });
+
+    // Highlight selected adventure
+    event.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+
+    console.log('Selected adventure:', adventureId);
+}
+
+function startSelectedAdventure() {
+    if (selectedAdventureId) {
+        alert('Starting adventure: ' + selectedAdventureId + '\n\nThis would redirect to the adventure/combat system!');
+        // Here you would implement the actual adventure start logic
+        // window.location.href = '/game/adventure/start/' + selectedAdventureId;
+    } else {
+        alert('Please select an adventure first!');
+    }
+}
+
+function continueCurrentQuest() {
+    alert('Continuing current quest...\n\nThis would resume the active quest!');
+    // Here you would implement quest continuation logic
+    // window.location.href = '/game/quest/continue';
 }
 </script>
-@endsection
+@endpush

@@ -1,362 +1,939 @@
 @extends('game.layout')
 
 @section('title', 'Character Sheet')
+@section('meta_description', 'Manage your character equipment and stats in Grassland Awakening - view abilities, allocate points, and equip gear.')
+
+@push('styles')
+<style>
+    /* Full-screen immersive layout */
+    body {
+        overflow: hidden;
+    }
+    
+    .character-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-image: url('/img/backgrounds/character.png');
+        z-index: 1;
+    }
+    
+    .character-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.2));
+        z-index: 2;
+    }
+    
+    .character-ui-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .character-ui-container > * {
+        pointer-events: all;
+    }
+    
+    /* Character Header Panel - Top Center */
+    .character-header-panel {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(33, 37, 41, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px 25px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        min-width: 600px;
+    }
+    
+    .character-portrait {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.5);
+        object-fit: cover;
+    }
+    
+    .header-stats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 15px;
+        margin-top: 10px;
+    }
+    
+    .header-stat {
+        text-align: center;
+    }
+    
+    .header-stat-value {
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    
+    .header-stat-label {
+        font-size: 0.7em;
+        opacity: 0.8;
+    }
+    
+    .experience-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+        margin: 8px 0;
+        overflow: hidden;
+    }
+    
+    .experience-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff, #20c997);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+    
+    /* Character Model Panel - Center */
+    .character-model-panel {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 400px;
+        height: 500px;
+        background: rgba(33, 37, 41, 0.3);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .character-model {
+        width: 250px;
+        height: 400px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.7));
+    }
+    
+    /* Equipment Slots Around Character Model */
+    .equipment-slot {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+    
+    .equipment-slot:hover {
+        transform: scale(1.1);
+        z-index: 20;
+    }
+    
+    .empty-slot {
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px dashed rgba(255, 255, 255, 0.4);
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .empty-slot:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .equipped-slot {
+        border: 3px solid;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    
+    .equipped-slot:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+    }
+    
+    .equipped-slot.common { border-color: #6c757d; background: rgba(108, 117, 125, 0.9); }
+    .equipped-slot.uncommon { border-color: #28a745; background: rgba(40, 167, 69, 0.9); }
+    .equipped-slot.rare { border-color: #007bff; background: rgba(0, 123, 255, 0.9); }
+    .equipped-slot.epic { border-color: #6f42c1; background: rgba(111, 66, 193, 0.9); }
+    .equipped-slot.legendary { border-color: #fd7e14; background: rgba(253, 126, 20, 0.9); }
+    
+    .slot-icon {
+        font-size: 2rem;
+    }
+    
+    .slot-item-image {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+    }
+    
+    /* Equipment slot positioning */
+    .slot-helm { top: -10px; left: 50%; transform: translateX(-50%); }
+    .slot-neck { top: 40px; right: -40px; }
+    .slot-weapon-1 { top: 100px; left: -40px; width: 100px; height: 100px; }
+    .slot-chest { top: 120px; left: 50%; transform: translateX(-50%); }
+    .slot-weapon-2 { top: 100px; right: -50px; width: 100px; height: 100px; }
+    .slot-gloves { top: 180px; left: -40px; }
+    .slot-ring-1 { top: 180px; right: -40px; }
+    .slot-pants { top: 240px; left: 50%; transform: translateX(-50%); }
+    .slot-ring-2 { top: 240px; right: -40px; }
+    .slot-boots { top: 320px; left: 50%; transform: translateX(-50%); }
+    .slot-artifact-1 { bottom: 60px; left: -40px; }
+    .slot-artifact-2 { bottom: 60px; right: -40px; }
+    
+    /* Stats Panel - Left Side */
+    .character-stats-panel {
+        position: absolute;
+        top: 120px;
+        left: 20px;
+        width: 300px;
+        background: rgba(40, 167, 69, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .ability-scores {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .ability-score {
+        text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .ability-score:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .ability-name {
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+    
+    .ability-value {
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin-bottom: 2px;
+    }
+    
+    .ability-modifier {
+        font-size: 0.75rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        padding: 2px 4px;
+    }
+    
+    .equipment-bonuses {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 10px;
+    }
+    
+    .bonus-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 2px 0;
+        font-size: 0.85rem;
+    }
+    
+    /* Inventory Panel - Right Side */
+    .character-inventory-panel {
+        position: absolute;
+        top: 120px;
+        right: 20px;
+        width: 320px;
+        height: calc(100vh - 160px);
+        background: rgba(23, 162, 184, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .inventory-tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 15px;
+    }
+    
+    .inventory-tab {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.7);
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+        flex: 1;
+        text-align: center;
+    }
+    
+    .inventory-tab.active,
+    .inventory-tab:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+    
+    .inventory-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    .inventory-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    
+    .inventory-item {
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    
+    .inventory-item:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    .inventory-item.equipped {
+        border-color: rgba(40, 167, 69, 0.8);
+        background: rgba(40, 167, 69, 0.2);
+    }
+    
+    .item-image {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+        margin: 0 auto 4px;
+    }
+    
+    .item-name {
+        font-size: 0.7rem;
+        font-weight: bold;
+        line-height: 1.1;
+        margin-bottom: 4px;
+    }
+    
+    .item-stats {
+        font-size: 0.6rem;
+        opacity: 0.8;
+        margin-bottom: 4px;
+    }
+    
+    .item-button {
+        background: linear-gradient(135deg, #495057, #6c757d);
+        border: none;
+        color: white;
+        padding: 4px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.6rem;
+        transition: all 0.3s ease;
+    }
+    
+    .item-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .item-button.equip { background: linear-gradient(135deg, #28a745, #1e7e34); }
+    .item-button.unequip { background: linear-gradient(135deg, #ffc107, #e0a800); }
+    
+    .empty-inventory {
+        text-align: center;
+        padding: 40px 10px;
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    /* Actions Panel - Bottom Left */
+    .character-actions-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        width: 300px;
+        background: rgba(255, 193, 7, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        color: #333;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .character-btn {
+        background: linear-gradient(135deg, #495057, #6c757d);
+        border: none;
+        color: white;
+        padding: 8px 12px;
+        margin: 3px 0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        text-decoration: none;
+        display: block;
+        width: 100%;
+        font-size: 0.85rem;
+        text-align: center;
+    }
+    
+    .character-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .character-btn.primary { background: linear-gradient(135deg, #007bff, #0056b3); }
+    .character-btn.success { background: linear-gradient(135deg, #28a745, #1e7e34); }
+    .character-btn.warning { background: linear-gradient(135deg, #ffc107, #e0a800); }
+    .character-btn.danger { background: linear-gradient(135deg, #dc3545, #c82333); }
+
+    /* Quick Actions Panel - Bottom Center */
+    .quick-actions-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(33, 37, 41, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .dashboard-btn {
+        background: linear-gradient(135deg, #495057, #6c757d);
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        margin: 5px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .dashboard-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        color: white;
+    }
+    
+    .dashboard-btn.primary { background: linear-gradient(135deg, #007bff, #0056b3); }
+    .dashboard-btn.success { background: linear-gradient(135deg, #28a745, #1e7e34); }
+    .dashboard-btn.warning { background: linear-gradient(135deg, #ffc107, #e0a800); }
+    .dashboard-btn.danger { background: linear-gradient(135deg, #dc3545, #c82333); }
+    
+    /* Rarity Colors */
+    .rarity-common { color: #6c757d; }
+    .rarity-uncommon { color: #28a745; }
+    .rarity-rare { color: #007bff; }
+    .rarity-epic { color: #6f42c1; }
+    .rarity-legendary { color: #fd7e14; }
+    
+    /* Custom Scrollbar */
+    .inventory-content::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .inventory-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+    }
+    
+    .inventory-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
+    }
+    
+    .inventory-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 1400px) {
+        .character-stats-panel, .character-inventory-panel, .character-actions-panel {
+            width: 250px;
+        }
+        
+        .character-model-panel {
+            width: 350px;
+            height: 450px;
+        }
+        
+        .character-model {
+            width: 200px;
+            height: 350px;
+        }
+    }
+    
+    @media (max-width: 1024px) {
+        .character-stats-panel, .character-actions-panel {
+            display: none;
+        }
+        
+        .character-inventory-panel {
+            right: 10px;
+            width: 280px;
+        }
+        
+        .character-model-panel {
+            left: 30%;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .character-model-panel {
+            width: 300px;
+            height: 400px;
+            left: 50%;
+            top: 45%;
+        }
+        
+        .character-model {
+            width: 150px;
+            height: 300px;
+        }
+        
+        .character-inventory-panel {
+            top: 100px;
+            right: 10px;
+            left: 10px;
+            width: auto;
+            height: calc(100vh - 140px);
+        }
+        
+        .character-header-panel {
+            min-width: auto;
+            left: 10px;
+            right: 10px;
+            transform: none;
+        }
+        
+        .header-stats {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+    }
+</style>
+@endpush
 
 @section('content')
-<div class="container-fluid">
-    <!-- Compact Character Header -->
-    <div class="row mb-2">
-        <div class="col-12">
-            <div class="card border-primary">
-                <div class="card-body py-2">
-                    <div class="row align-items-center">
-                        <div class="col-md-2">
-                            <div class="character-portrait position-relative">
-                                <img src="{{ $player->getCharacterImagePath() }}" 
-                                     alt="{{ ucfirst($player->gender) }} Character" 
-                                     class="character-avatar rounded"
-                                     style="width: 50px; height: 70px; object-fit: cover;">
-                                <button class="btn btn-sm btn-outline-secondary position-absolute bottom-0 end-0 p-1" 
-                                        onclick="showGenderModal()" title="Change Gender" style="font-size: 0.7rem;">
-                                    ⚧
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h1 class="h6 mb-1">{{ $player->character_name }} - Level {{ $player->level }} {{ ucfirst($player->gender) }}</h1>
-                            <div class="row text-center g-1">
-                                <div class="col">
-                                    <div class="fw-bold text-success small">{{ $player->hp }}/{{ $player->max_hp }}</div>
-                                    <small class="text-muted" style="font-size: 0.7rem;">HP</small>
-                                </div>
-                                <div class="col">
-                                    <div class="fw-bold text-primary small">{{ $totalAC }}</div>
-                                    <small class="text-muted" style="font-size: 0.7rem;">AC</small>
-                                </div>
-                                <div class="col">
-                                    <div class="fw-bold text-danger small">{{ $maxDamage }}</div>
-                                    <small class="text-muted" style="font-size: 0.7rem;">DMG</small>
-                                </div>
-                                <div class="col">
-                                    <div class="fw-bold text-warning small">{{ number_format($player->persistent_currency) }}</div>
-                                    <small class="text-muted" style="font-size: 0.7rem;">Gold</small>
-                                </div>
-                                <div class="col">
-                                    @if($player->hasUnallocatedStatPoints())
-                                        <div class="fw-bold text-danger small">{{ $player->unallocated_stat_points }}</div>
-                                        <small class="text-muted" style="font-size: 0.7rem;">Stats</small>
-                                    @else
-                                        <div class="fw-bold text-info small">{{ $player->level }}</div>
-                                        <small class="text-muted" style="font-size: 0.7rem;">Level</small>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="progress mb-1" style="height: 8px;">
-                                @php
-                                    $expToNext = $player->calculateExperienceToNextLevel();
-                                    $expProgress = $expToNext > 0 ? ($player->experience / $expToNext) * 100 : 100;
-                                @endphp
-                                <div class="progress-bar bg-info" style="width: {{ $expProgress }}%"></div>
-                            </div>
-                            <small class="text-muted">{{ $player->experience }}/{{ $expToNext }} XP</small>
-                            <div class="text-end">
-                                @if($player->canLevelUp())
-                                    <button class="btn btn-success btn-sm me-1" onclick="levelUpPlayer()">
-                                        🎉 Level Up!
-                                    </button>
-                                @endif
-                                @if($player->hasUnallocatedStatPoints())
-                                    <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#statAllocationModal">
-                                        Allocate ({{ $player->unallocated_stat_points }})
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<!-- Character Background -->
+<div class="character-background"></div>
+<div class="character-overlay"></div>
+
+<!-- Character UI Overlay System -->
+<div class="character-ui-container">
+    <!-- Character Header Panel - Top Center -->
+    <div class="character-header-panel">
+        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+            <img src="{{ $player->getCharacterImagePath() }}" 
+                 alt="{{ ucfirst($player->gender) }} Character" 
+                 class="character-portrait">
+            <div>
+                <h1 class="mb-1">{{ $player->character_name }}</h1>
+                <div class="small">Level {{ $player->level }} {{ ucfirst($player->gender) }}</div>
+            </div>
+            <button class="btn btn-sm btn-outline-light" onclick="showGenderModal()">⚧ Change</button>
+        </div>
+        
+        <!-- Experience Bar -->
+        @php
+            $expToNext = $player->calculateExperienceToNextLevel();
+            $expProgress = $expToNext > 0 ? ($player->experience / $expToNext) * 100 : 100;
+        @endphp
+        <div class="experience-bar">
+            <div class="experience-fill" style="width: {{ $expProgress }}%"></div>
+        </div>
+        <div class="small">{{ number_format($player->experience) }}/{{ number_format($expToNext) }} XP</div>
+        
+        <!-- Header Stats -->
+        <div class="header-stats">
+            <div class="header-stat">
+                <div class="header-stat-value text-success">{{ $player->hp }}/{{ $player->max_hp }}</div>
+                <div class="header-stat-label">Health</div>
+            </div>
+            <div class="header-stat">
+                <div class="header-stat-value text-primary">{{ $totalAC }}</div>
+                <div class="header-stat-label">Armor Class</div>
+            </div>
+            <div class="header-stat">
+                <div class="header-stat-value text-danger">{{ $maxDamage }}</div>
+                <div class="header-stat-label">Max Damage</div>
+            </div>
+            <div class="header-stat">
+                <div class="header-stat-value text-warning">{{ number_format($player->persistent_currency) }}</div>
+                <div class="header-stat-label">Gold 💰</div>
+            </div>
+            <div class="header-stat">
+                @if($player->hasUnallocatedStatPoints())
+                    <div class="header-stat-value text-danger">{{ $player->unallocated_stat_points }}</div>
+                    <div class="header-stat-label">Stat Points</div>
+                @elseif($player->canLevelUp())
+                    <div class="header-stat-value text-success">🎉</div>
+                    <div class="header-stat-label">Level Up!</div>
+                @else
+                    <div class="header-stat-value text-info">{{ $player->level }}</div>
+                    <div class="header-stat-label">Level</div>
+                @endif
             </div>
         </div>
     </div>
 
-    <!-- Main Character Layout -->
-    <div class="row" style="height: calc(70vh - 100px);">
-        <!-- Left Panel: Character with Equipment Slots on Border -->
-        <div class="col-lg-5">
-            <div class="card h-100">
-                <div class="card-header py-1">
-                    <h6 class="mb-0">Equipment</h6>
-                </div>
-                <div class="card-body p-1 position-relative" style="background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);">
-                    <div class="equipment-panel-container position-relative h-100">
-                        <!-- Character Image Centered -->
-                        <div class="character-display d-flex align-items-center justify-content-center h-100">
-                            <img src="{{ $player->getCharacterImagePath() }}" 
-                                 alt="{{ ucfirst($player->gender) }} Character" 
-                                 class="character-model"
-                                 style="width: 200px; height: 355px; object-fit: contain; filter: drop-shadow(0 0 15px rgba(0,0,0,0.5));">
+    <!-- Character Model Panel - Center -->
+    <div class="character-model-panel">
+        <img src="{{ $player->getCharacterImagePath() }}" 
+             alt="{{ ucfirst($player->gender) }} Character" 
+             class="character-model">
+        
+        <!-- Equipment Slots -->
+        @php
+            $slots = [
+                'helm' => ['⛑️', 'Helmet'],
+                'neck' => ['💎', 'Necklace'], 
+                'weapon_1' => ['⚔️', 'Main Hand'],
+                'chest' => ['👔', 'Chest Armor'],
+                'weapon_2' => ['🗡️', 'Off Hand'],
+                'gloves' => ['🧤', 'Gloves'],
+                'ring_1' => ['💍', 'Ring 1'],
+                'pants' => ['👖', 'Pants'],
+                'ring_2' => ['💍', 'Ring 2'],
+                'boots' => ['👢', 'Boots'],
+                'artifact_1' => ['✨', 'Artifact 1'],
+                'artifact_2' => ['✨', 'Artifact 2'],
+            ];
+        @endphp
+        
+        @foreach($slots as $slot => $config)
+            <div class="equipment-slot slot-{{ $slot }} 
+                        @if(isset($equipment[$slot]) && $equipment[$slot])
+                            equipped-slot {{ $equipment[$slot]->item->rarity }}
+                        @else
+                            empty-slot
+                        @endif"
+                 data-slot="{{ $slot }}"
+                 @if(isset($equipment[$slot]) && $equipment[$slot])
+                     onclick="unequipPlayerItem({{ $equipment[$slot]->id }})"
+                     title="{{ method_exists($equipment[$slot], 'getDisplayName') ? $equipment[$slot]->getDisplayName() : $equipment[$slot]->item->name }} (Click to unequip)"
+                 @else
+                     title="{{ $config[1] }}"
+                 @endif>
+                @if(isset($equipment[$slot]) && $equipment[$slot])
+                    <img src="{{ $equipment[$slot]->item->getImagePath() }}" 
+                         alt="{{ $equipment[$slot]->item->name }}"
+                         class="slot-item-image">
+                @else
+                    <div class="slot-icon">{{ $config[0] }}</div>
+                @endif
+            </div>
+        @endforeach
+    </div>
+
+    <!-- Character Stats Panel - Left Side -->
+    <div class="character-stats-panel">
+        <div class="mb-3">
+            <h2 class="h6 mb-3">📊 Ability Scores</h2>
+            <div class="ability-scores">
+                @foreach(['str' => 'STR', 'dex' => 'DEX', 'con' => 'CON', 'int' => 'INT', 'wis' => 'WIS', 'cha' => 'CHA'] as $stat => $name)
+                    <div class="ability-score">
+                        <div class="ability-name">{{ $name }}</div>
+                        <div class="ability-value">
+                            {{ $player->getAttribute($stat) }}
+                            @if($equipmentBonuses[$stat] != 0)
+                                <span class="text-{{ $equipmentBonuses[$stat] > 0 ? 'success' : 'danger' }}" style="font-size: 0.7em;">
+                                    {{ $equipmentBonuses[$stat] > 0 ? '+' : '' }}{{ $equipmentBonuses[$stat] }}
+                                </span>
+                            @endif
                         </div>
-                        
-                        <!-- Equipment Slots on Panel Borders -->
-                        @php
-                            // Equipment slots positioned on panel borders - reorganized layout
-                            $borderSlots = [
-                                // Left border - head, chest, gloves, pants, feet (evenly spaced)
-                                'helm' => ['top: 5%; left: 10px;', 'fas fa-hard-hat', 'Helmet'],
-                                'chest' => ['top: 25%; left: 10px;', 'fas fa-vest', 'Chest Armor'],
-                                'gloves' => ['top: 45%; left: 10px;', 'fas fa-mitten', 'Gloves'],
-                                'pants' => ['top: 65%; left: 10px;', 'fas fa-socks', 'Pants'],
-                                'boots' => ['top: 85%; left: 10px;', 'fas fa-shoe-prints', 'Boots'],
-                                
-                                // Right border - neck, rings, artifacts (evenly spaced)
-                                'neck' => ['top: 5%; right: 10px;', 'fas fa-gem', 'Necklace'],
-                                'ring_1' => ['top: 25%; right: 10px;', 'fas fa-ring', 'Ring 1'],
-                                'ring_2' => ['top: 45%; right: 10px;', 'fas fa-ring', 'Ring 2'],
-                                'artifact_1' => ['top: 65%; right: 10px;', 'fas fa-magic', 'Artifact 1'],
-                                'artifact_2' => ['top: 85%; right: 10px;', 'fas fa-magic', 'Artifact 2'],
-                            ];
-                            
-                            // Weapon slots - larger and positioned under character
-                            $weaponSlots = [
-                                'weapon_1' => ['bottom: 80px; left: 20%;', 'fas fa-sword', 'Main Hand'],
-                                'weapon_2' => ['bottom: 80px; right: 20%;', 'fas fa-dagger', 'Off Hand'],
-                            ];
-                        @endphp
-                        
-                        <!-- Regular equipment slots -->
-                        @foreach($borderSlots as $slot => $config)
-                            <div class="equipment-slot-border" 
-                                 data-slot="{{ $slot }}" 
-                                 style="position: absolute; {{ $config[0] }} width: 90px; height: 90px; z-index: 10;">
-                                @if(isset($equipment[$slot]) && $equipment[$slot])
-                                    <div class="equipment-item-border {{ $equipment[$slot]->item->getRarityColor() }} equipment-clickable" 
-                                         data-bs-toggle="tooltip" 
-                                         data-bs-html="true" 
-                                         data-bs-placement="top"
-                                         data-item-name="{{ method_exists($equipment[$slot], 'getDisplayName') ? $equipment[$slot]->getDisplayName() : $equipment[$slot]->item->name }}"
-                                         data-item-rarity="{{ $equipment[$slot]->item->rarity }}"
-                                         data-item-stats="{{ json_encode($equipment[$slot]->item->stats_modifiers ?? []) }}"
-                                         data-item-ac="{{ $equipment[$slot]->item->ac_bonus ?? 0 }}"
-                                         data-item-damage="{{ $equipment[$slot]->item->damage_dice ?? '' }}"
-                                         data-item-damage-bonus="{{ $equipment[$slot]->item->damage_bonus ?? 0 }}"
-                                         onclick="unequipPlayerItem({{ $equipment[$slot]->id }})"
-                                         title="Click to unequip">
-                                        <img src="{{ $equipment[$slot]->item->getImagePath() }}" 
-                                             alt="{{ $equipment[$slot]->item->name }}"
-                                             style="width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-                                    </div>
-                                @else
-                                    <div class="empty-equipment-slot-border" title="{{ $config[2] }}">
-                                        <i class="{{ $config[1] }}"></i>
-                                    </div>
-                                @endif
-                            </div>
-                        @endforeach
-                        
-                        <!-- Weapon slots (larger) -->
-                        @foreach($weaponSlots as $slot => $config)
-                            <div class="equipment-slot-border weapon-slot" 
-                                 data-slot="{{ $slot }}" 
-                                 style="position: absolute; {{ $config[0] }} width: 180px; height: 180px; z-index: 10;">
-                                @if(isset($equipment[$slot]) && $equipment[$slot])
-                                    <div class="equipment-item-border weapon-item {{ $equipment[$slot]->item->getRarityColor() }} equipment-clickable" 
-                                         data-bs-toggle="tooltip" 
-                                         data-bs-html="true" 
-                                         data-bs-placement="top"
-                                         data-item-name="{{ method_exists($equipment[$slot], 'getDisplayName') ? $equipment[$slot]->getDisplayName() : $equipment[$slot]->item->name }}"
-                                         data-item-rarity="{{ $equipment[$slot]->item->rarity }}"
-                                         data-item-stats="{{ json_encode($equipment[$slot]->item->stats_modifiers ?? []) }}"
-                                         data-item-ac="{{ $equipment[$slot]->item->ac_bonus ?? 0 }}"
-                                         data-item-damage="{{ $equipment[$slot]->item->damage_dice ?? '' }}"
-                                         data-item-damage-bonus="{{ $equipment[$slot]->item->damage_bonus ?? 0 }}"
-                                         onclick="unequipPlayerItem({{ $equipment[$slot]->id }})"
-                                         title="Click to unequip">
-                                        <img src="{{ $equipment[$slot]->item->getImagePath() }}" 
-                                             alt="{{ $equipment[$slot]->item->name }}"
-                                             style="width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">
-                                    </div>
-                                @else
-                                    <div class="empty-equipment-slot-border weapon-empty" title="{{ $config[2] }}">
-                                        <i class="{{ $config[1] }}"></i>
-                                    </div>
-                                @endif
-                            </div>
-                        @endforeach
+                        <div class="ability-modifier">
+                            {{ floor(($totalStats[$stat] - 10) / 2) >= 0 ? '+' : '' }}{{ floor(($totalStats[$stat] - 10) / 2) }}
+                        </div>
                     </div>
-                </div>
+                @endforeach
             </div>
         </div>
         
-        <!-- Right Panel: Stats and Inventory Only -->
-        <div class="col-lg-7">
-            <div class="card h-100">
-                <div class="card-header py-1">
-                    <ul class="nav nav-tabs card-header-tabs" id="characterTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active small" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab">
-                                Stats & Skills
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link small" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button" role="tab">
-                                Inventory
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-                <div class="card-body p-2">
-                    <div class="tab-content" id="characterTabContent" style="height: calc(100% - 10px); overflow: visible;">
-                        <!-- Stats & Skills Tab -->
-                        <div class="tab-pane fade show active" id="stats" role="tabpanel">
-                            <!-- Ability Scores -->
-                            <div class="mb-3">
-                                <h6 class="text-muted mb-2 small">Ability Scores</h6>
-                                <div class="row g-2">
-                                    @foreach(['str' => 'STR', 'dex' => 'DEX', 'con' => 'CON', 'int' => 'INT', 'wis' => 'WIS', 'cha' => 'CHA'] as $stat => $name)
-                                        <div class="col-4">
-                                            <div class="stat-card text-center p-2 border rounded">
-                                                <div class="fw-bold small">{{ $name }}</div>
-                                                <div class="stat-value small">
-                                                    {{ $player->getAttribute($stat) }}
-                                                    @if($equipmentBonuses[$stat] != 0)
-                                                        <span class="text-{{ $equipmentBonuses[$stat] > 0 ? 'success' : 'danger' }}" style="font-size: 0.7rem;">
-                                                            {{ $equipmentBonuses[$stat] > 0 ? '+' : '' }}{{ $equipmentBonuses[$stat] }}
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                                <div class="badge bg-secondary" style="font-size: 0.7rem;">
-                                                    {{ floor(($totalStats[$stat] - 10) / 2) > 0 ? '+' : '' }}{{ floor(($totalStats[$stat] - 10) / 2) }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
+        <div class="equipment-bonuses">
+            <div class="fw-bold small mb-2">⚡ Equipment Bonuses</div>
+            @php $hasAnyBonus = false; @endphp
+            @foreach($equipmentBonuses as $stat => $bonus)
+                @if($bonus != 0)
+                    @php $hasAnyBonus = true; @endphp
+                    <div class="bonus-item">
+                        <span>
+                            @if($stat === 'weapon_damage')
+                                Weapon Damage
+                            @elseif($stat === 'ac')
+                                Armor Class
+                            @else
+                                {{ strtoupper($stat) }}
+                            @endif
+                        </span>
+                        <span class="text-{{ $bonus > 0 ? 'success' : 'danger' }}">
+                            {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
+                        </span>
+                    </div>
+                @endif
+            @endforeach
+            @if(!$hasAnyBonus)
+                <div class="text-center small opacity-75">No active bonuses</div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Character Inventory Panel - Right Side -->
+    <div class="character-inventory-panel">
+        <div class="mb-2">
+            <div class="fw-bold small">🎒 Quick Equipment</div>
+        </div>
+        
+        <!-- Inventory Tabs -->
+        <div class="inventory-tabs">
+            <button class="inventory-tab active" data-category="weapons">
+                ⚔️ {{ $inventory['weapons']->count() }}
+            </button>
+            <button class="inventory-tab" data-category="armor">
+                🛡️ {{ $inventory['armor']->count() }}
+            </button>
+            <button class="inventory-tab" data-category="accessories">
+                💍 {{ $inventory['accessories']->count() }}
+            </button>
+        </div>
+        
+        <!-- Inventory Content -->
+        <div class="inventory-content">
+            <!-- Weapons -->
+            <div class="inventory-category" data-category="weapons">
+                @if($inventory['weapons']->count() > 0)
+                    <div class="inventory-grid">
+                        @foreach($inventory['weapons'] as $item)
+                            <div class="inventory-item @if($item->is_equipped) equipped @endif">
+                                <img src="{{ $item->item->getImagePath() }}" 
+                                     alt="{{ $item->item->name }}" 
+                                     class="item-image">
+                                <div class="item-name rarity-{{ $item->item->rarity }}">
+                                    {{ Str::limit($item->item->name, 12) }}
                                 </div>
-                            </div>
-                            
-                            <!-- Equipment Summary -->
-                            <div class="mb-3">
-                                <h6 class="text-muted mb-2 small">Equipment Bonuses</h6>
-                                <div class="row g-1">
-                                    @php $hasAnyBonus = false; @endphp
-                                    @foreach($equipmentBonuses as $stat => $bonus)
-                                        @if($bonus != 0)
-                                            @php $hasAnyBonus = true; @endphp
-                                            <div class="col-6">
-                                                <span class="text-{{ $bonus > 0 ? 'success' : 'danger' }}" style="font-size: 0.8rem;">
-                                                    @if($stat === 'weapon_damage')
-                                                        WEAPON DMG: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
-                                                    @elseif($stat === 'ac')
-                                                        AC: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
-                                                    @else
-                                                        {{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}
-                                                    @endif
-                                                </span>
-                                            </div>
-                                        @endif
-                                    @endforeach
-                                    @if(!$hasAnyBonus)
-                                        <div class="col-12">
-                                            <span class="text-muted small">No equipment bonuses</span>
-                                        </div>
+                                <div class="item-stats">
+                                    @if($item->item->damage_dice)
+                                        ⚔️ {{ $item->item->damage_dice }}@if($item->item->damage_bonus > 0)+{{ $item->item->damage_bonus }}@endif
                                     @endif
                                 </div>
+                                @if($item->is_equipped)
+                                    <button class="item-button unequip" onclick="unequipPlayerItem({{ $item->id }})">
+                                        Unequip
+                                    </button>
+                                @else
+                                    <button class="item-button equip" onclick="equipPlayerItem({{ $item->id }})">
+                                        Equip
+                                    </button>
+                                @endif
                             </div>
-                            
-                            <!-- Skills Section (Future Development) -->
-                            <div class="mb-3">
-                                <h6 class="text-muted mb-2 small">Skills</h6>
-                                <div class="text-center text-muted py-3">
-                                    <i class="fas fa-tools fa-2x mb-2"></i>
-                                    <div>Skills system coming soon...</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Inventory Tab -->
-                        <div class="tab-pane fade" id="inventory" role="tabpanel">
-                            <div class="inventory-section">
-                                <ul class="nav nav-pills nav-fill mb-2" id="inventory-subtabs" role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" style="font-size: 0.8rem;" id="weapons-subtab" data-bs-toggle="pill" data-bs-target="#weapons" type="button" role="tab">
-                                            Weapons <span class="badge bg-secondary ms-1">{{ $inventory['weapons']->count() }}</span>
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" style="font-size: 0.8rem;" id="armor-subtab" data-bs-toggle="pill" data-bs-target="#armor" type="button" role="tab">
-                                            Armor <span class="badge bg-secondary ms-1">{{ $inventory['armor']->count() }}</span>
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" style="font-size: 0.8rem;" id="accessories-subtab" data-bs-toggle="pill" data-bs-target="#accessories" type="button" role="tab">
-                                            Accessories <span class="badge bg-secondary ms-1">{{ $inventory['accessories']->count() }}</span>
-                                        </button>
-                                    </li>
-                                </ul>
-                                
-                                <div class="tab-content" id="inventory-subcontent" style="max-height: 500px; overflow-y: auto;">
-                                    @foreach(['weapons', 'armor', 'accessories'] as $category)
-                                        <div class="tab-pane fade {{ $category === 'weapons' ? 'show active' : '' }}" id="{{ $category }}" role="tabpanel">
-                                            @if($inventory[$category]->count() > 0)
-                                                <div class="row g-2">
-                                                    @foreach($inventory[$category] as $playerItem)
-                                                        <div class="col-4">
-                                                            <div class="inventory-item-card p-2 border rounded {{ $playerItem->item->getRarityColor() }} h-100" data-item-id="{{ $playerItem->id }}">
-                                                                <div class="text-center mb-2">
-                                                                    <img src="{{ $playerItem->item->getImagePath() }}" 
-                                                                         alt="{{ $playerItem->item->name }}" 
-                                                                         style="width: 40px; height: 40px; object-fit: contain;">
-                                                                </div>
-                                                                <div class="text-center">
-                                                                    <div class="fw-bold" style="font-size: 0.75rem; line-height: 1.1;">{{ Str::limit($playerItem->item->name, 15) }}</div>
-                                                                    <small class="text-muted d-block" style="font-size: 0.7rem;">{{ ucfirst($playerItem->item->rarity) }}</small>
-                                                                    
-                                                                    @if($playerItem->item->stats_modifiers)
-                                                                        <div style="font-size: 0.65rem; margin: 2px 0;">
-                                                                            @foreach($playerItem->item->stats_modifiers as $stat => $bonus)
-                                                                                @if($bonus != 0)
-                                                                                    <div class="text-truncate">{{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}</div>
-                                                                                @endif
-                                                                            @endforeach
-                                                                        </div>
-                                                                    @endif
-                                                                    @if($playerItem->item->damage_dice)
-                                                                        <div style="font-size: 0.65rem;" class="text-truncate">DMG: {{ $playerItem->item->damage_dice }}@if($playerItem->item->damage_bonus > 0)+{{ $playerItem->item->damage_bonus }}@endif</div>
-                                                                    @endif
-                                                                    @if($playerItem->item->ac_bonus)
-                                                                        <div style="font-size: 0.65rem;">AC: +{{ $playerItem->item->ac_bonus }}</div>
-                                                                    @endif
-                                                                    
-                                                                    <div class="mt-2">
-                                                                        @if($playerItem->canEquip())
-                                                                            <button class="btn btn-xs btn-success equip-item-btn w-100" data-item-id="{{ $playerItem->id }}" style="font-size: 0.7rem; padding: 2px 4px;">
-                                                                                Equip
-                                                                            </button>
-                                                                        @elseif($playerItem->canUnequip())
-                                                                            <button class="btn btn-xs btn-warning unequip-item-btn w-100" data-item-id="{{ $playerItem->id }}" style="font-size: 0.7rem; padding: 2px 4px;">
-                                                                                Unequip
-                                                                            </button>
-                                                                        @endif
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            @else
-                                                <div class="text-center text-muted py-3">
-                                                    <i class="fas fa-box-open fa-2x mb-2"></i>
-                                                    <div>No {{ $category }} in inventory</div>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
+                        @endforeach
                     </div>
-                </div>
+                @else
+                    <div class="empty-inventory">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">⚔️</div>
+                        <div>No weapons in inventory</div>
+                    </div>
+                @endif
             </div>
+            
+            <!-- Armor -->
+            <div class="inventory-category" data-category="armor" style="display: none;">
+                @if($inventory['armor']->count() > 0)
+                    <div class="inventory-grid">
+                        @foreach($inventory['armor'] as $item)
+                            <div class="inventory-item @if($item->is_equipped) equipped @endif">
+                                <img src="{{ $item->item->getImagePath() }}" 
+                                     alt="{{ $item->item->name }}" 
+                                     class="item-image">
+                                <div class="item-name rarity-{{ $item->item->rarity }}">
+                                    {{ Str::limit($item->item->name, 12) }}
+                                </div>
+                                <div class="item-stats">
+                                    @if($item->item->ac_bonus)
+                                        🛡️ +{{ $item->item->ac_bonus }} AC
+                                    @endif
+                                </div>
+                                @if($item->is_equipped)
+                                    <button class="item-button unequip" onclick="unequipPlayerItem({{ $item->id }})">
+                                        Unequip
+                                    </button>
+                                @else
+                                    <button class="item-button equip" onclick="equipPlayerItem({{ $item->id }})">
+                                        Equip
+                                    </button>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="empty-inventory">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">🛡️</div>
+                        <div>No armor in inventory</div>
+                    </div>
+                @endif
+            </div>
+            
+            <!-- Accessories -->
+            <div class="inventory-category" data-category="accessories" style="display: none;">
+                @if($inventory['accessories']->count() > 0)
+                    <div class="inventory-grid">
+                        @foreach($inventory['accessories'] as $item)
+                            <div class="inventory-item @if($item->is_equipped) equipped @endif">
+                                <img src="{{ $item->item->getImagePath() }}" 
+                                     alt="{{ $item->item->name }}" 
+                                     class="item-image">
+                                <div class="item-name rarity-{{ $item->item->rarity }}">
+                                    {{ Str::limit($item->item->name, 12) }}
+                                </div>
+                                <div class="item-stats">
+                                    @if($item->item->stats_modifiers)
+                                        @foreach($item->item->stats_modifiers as $stat => $bonus)
+                                            @if($bonus != 0)
+                                                <div>{{ strtoupper($stat) }}: {{ $bonus > 0 ? '+' : '' }}{{ $bonus }}</div>
+                                                @break
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                </div>
+                                @if($item->is_equipped)
+                                    <button class="item-button unequip" onclick="unequipPlayerItem({{ $item->id }})">
+                                        Unequip
+                                    </button>
+                                @else
+                                    <button class="item-button equip" onclick="equipPlayerItem({{ $item->id }})">
+                                        Equip
+                                    </button>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="empty-inventory">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">💍</div>
+                        <div>No accessories in inventory</div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Actions Panel - Bottom Left -->
+    <div class="character-actions-panel">
+        <div class="mb-2">
+            <div class="fw-bold small">⚡ Character Actions</div>
+        </div>
+        
+        @if($player->canLevelUp())
+            <button class="character-btn success" onclick="levelUpPlayer()">
+                🎉 Level Up Available!
+            </button>
+        @endif
+        
+        @if($player->hasUnallocatedStatPoints())
+            <button class="character-btn warning" data-bs-toggle="modal" data-bs-target="#statAllocationModal">
+                📊 Allocate Points ({{ $player->unallocated_stat_points }})
+            </button>
+        @endif
+        
+        @if($player->skill_points > 0)
+            <a href="{{ route('game.skills') }}" class="character-btn primary">
+                🎯 Skill Points ({{ $player->skill_points }})
+            </a>
+        @endif
+        
+        <hr style="border-color: rgba(0,0,0,0.2); margin: 10px 0;">
+        
+        <a href="{{ route('game.inventory') }}" class="character-btn primary">
+            🎒 Full Inventory
+        </a>
+        
+        <a href="{{ route('game.skills') }}" class="character-btn primary">
+            🎯 Skills & Talents
+        </a>
+        
+        <a href="{{ route('game.village') }}" class="character-btn success">
+            🏘️ Back to Village
+        </a>
+    </div>
+
+    <!-- Quick Actions Panel - Bottom Center -->
+    <div class="quick-actions-panel">
+        <div class="mb-2 text-center text-white">
+            <div class="fw-bold small">Quick Actions</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap justify-content-center">
+            <a href="{{ route('game.adventures') }}" class="dashboard-btn danger">
+                🗺️ Adventure
+            </a>
+            <a href="{{ route('game.inventory') }}" class="dashboard-btn warning">
+                🎒 Inventory
+            </a>
+            <a href="{{ route('game.village') }}" class="dashboard-btn success">
+                🏘️ Village
+            </a>
+            <a href="{{ route('game.skills') }}" class="dashboard-btn primary">
+                🎯 Skills
+            </a>
         </div>
     </div>
 </div>
@@ -364,22 +941,22 @@
 <!-- Gender Change Modal -->
 <div class="modal fade" id="genderModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
+        <div class="modal-content" style="background: rgba(33, 37, 41, 0.95); backdrop-filter: blur(15px); border: 2px solid rgba(255, 255, 255, 0.3); color: white;">
+            <div class="modal-header" style="border-color: rgba(255, 255, 255, 0.2);">
                 <h5 class="modal-title">Change Gender</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-3">
                     <div class="col-6">
-                        <div class="gender-option btn btn-outline-primary w-100 p-3 {{ $player->gender === 'male' ? 'active' : '' }}" 
+                        <div class="gender-option btn btn-outline-light w-100 p-3 {{ $player->gender === 'male' ? 'active' : '' }}" 
                              data-gender="male" onclick="selectGender('male')">
                             <img src="{{ asset('img/player_male.png') }}" alt="Male" style="width: 60px; height: 60px; object-fit: cover;" class="mb-2">
                             <div>Male</div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="gender-option btn btn-outline-primary w-100 p-3 {{ $player->gender === 'female' ? 'active' : '' }}" 
+                        <div class="gender-option btn btn-outline-light w-100 p-3 {{ $player->gender === 'female' ? 'active' : '' }}" 
                              data-gender="female" onclick="selectGender('female')">
                             <img src="{{ asset('img/player_female.png') }}" alt="Female" style="width: 60px; height: 60px; object-fit: cover;" class="mb-2">
                             <div>Female</div>
@@ -387,7 +964,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="border-color: rgba(255, 255, 255, 0.2);">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="confirmGenderBtn" onclick="changeGender()" disabled>Confirm</button>
             </div>
@@ -398,10 +975,10 @@
 <!-- Stat Allocation Modal -->
 <div class="modal fade" id="statAllocationModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
+        <div class="modal-content" style="background: rgba(33, 37, 41, 0.95); backdrop-filter: blur(15px); border: 2px solid rgba(255, 255, 255, 0.3); color: white;">
+            <div class="modal-header" style="border-color: rgba(255, 255, 255, 0.2);">
                 <h5 class="modal-title">Allocate Stat Points</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">
@@ -411,14 +988,14 @@
                 <div class="row g-3">
                     @foreach(['str' => 'Strength', 'dex' => 'Dexterity', 'con' => 'Constitution', 'int' => 'Intelligence', 'wis' => 'Wisdom', 'cha' => 'Charisma'] as $stat => $name)
                         <div class="col-md-6">
-                            <div class="stat-allocation-row p-3 border rounded">
+                            <div class="stat-allocation-row p-3 border rounded" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2) !important;">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <strong>{{ $name }}</strong>
                                     <span class="total-{{ $stat }}">{{ $player->getAttribute($stat) }}</span>
                                 </div>
                                 <div class="d-flex align-items-center">
                                     <button type="button" class="btn btn-sm btn-outline-danger btn-stat-decrease" data-stat="{{ $stat }}">-</button>
-                                    <input type="number" class="form-control form-control-sm mx-2 text-center" id="{{ $stat }}_points" value="0" readonly style="width: 60px;">
+                                    <input type="number" class="form-control form-control-sm mx-2 text-center" id="{{ $stat }}_points" value="0" readonly style="width: 60px; background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.3); color: white;">
                                     <button type="button" class="btn btn-sm btn-outline-success btn-stat-increase" data-stat="{{ $stat }}">+</button>
                                 </div>
                             </div>
@@ -426,174 +1003,42 @@
                     @endforeach
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="border-color: rgba(255, 255, 255, 0.2);">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="allocate-btn" onclick="submitStatAllocation()" disabled>Allocate Points</button>
             </div>
         </div>
     </div>
 </div>
+@endsection
 
-<style>
-/* Compact Layout Styles */
-.equipment-panel-container {
-    min-height: 600px;
-}
-
-.equipment-slot-border {
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.equipment-slot-border:hover {
-    transform: scale(1.1) !important;
-    z-index: 20 !important;
-}
-
-.equipment-item-border {
-    width: 90px;
-    height: 90px;
-    background: rgba(40, 167, 69, 0.9);
-    border: 3px solid #28a745;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    transition: all 0.2s ease;
-}
-
-.equipment-item-border:hover {
-    box-shadow: 0 6px 16px rgba(0,0,0,0.6);
-    transform: translateY(-2px);
-}
-
-.equipment-clickable {
-    cursor: pointer;
-}
-
-.equipment-clickable:hover {
-    filter: brightness(1.1);
-    transform: translateY(-3px);
-}
-
-.equipment-item-border.common { border-color: #6c757d; background: rgba(108, 117, 125, 0.9); }
-.equipment-item-border.uncommon { border-color: #28a745; background: rgba(40, 167, 69, 0.9); }
-.equipment-item-border.rare { border-color: #007bff; background: rgba(0, 123, 255, 0.9); }
-.equipment-item-border.epic { border-color: #6f42c1; background: rgba(111, 66, 193, 0.9); }
-.equipment-item-border.legendary { border-color: #fd7e14; background: rgba(253, 126, 20, 0.9); }
-
-.empty-equipment-slot-border {
-    width: 90px;
-    height: 90px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 3px dashed rgba(255, 255, 255, 0.6);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.8);
-    transition: all 0.2s ease;
-    backdrop-filter: blur(2px);
-}
-
-.empty-equipment-slot-border:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.9);
-    color: rgba(255, 255, 255, 1);
-}
-
-.equipment-item-border i, .empty-equipment-slot-border i {
-    font-size: 2.2rem;
-    color: white;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-}
-
-.empty-equipment-slot-border i {
-    color: rgba(255, 255, 255, 0.8);
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-}
-
-/* Weapon slot specific styles */
-.weapon-item {
-    width: 180px;
-    height: 180px;
-    border-radius: 18px;
-    border-width: 4px;
-}
-
-.weapon-empty {
-    width: 180px;
-    height: 180px;
-    border-radius: 18px;
-    border-width: 4px;
-}
-
-.weapon-item i, .weapon-empty i {
-    font-size: 4.4rem;
-}
-
-.stat-card {
-    background: rgba(248, 249, 250, 0.8);
-    transition: all 0.2s ease;
-    min-height: 70px;
-}
-
-.stat-card:hover {
-    background: rgba(248, 249, 250, 1);
-    transform: translateY(-1px);
-}
-
-.inventory-item {
-    transition: all 0.2s ease;
-}
-
-.inventory-item:hover {
-    transform: translateX(2px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.inventory-item-card {
-    transition: all 0.2s ease;
-    min-height: 120px;
-    cursor: pointer;
-}
-
-.inventory-item-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.character-avatar {
-    object-position: top center;
-}
-
-/* Dark mode support */
-.dark .stat-card {
-    background: var(--bg-accent);
-    border-color: var(--border-color);
-    color: var(--text-high-contrast);
-}
-
-.dark .stat-card:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-color);
-}
-
-.dark .empty-equipment-slot-border {
-    background: rgba(31, 41, 55, 0.3);
-    border-color: var(--border-color);
-    color: var(--text-medium-contrast);
-}
-
-.dark .empty-equipment-slot-border:hover {
-    background: rgba(31, 41, 55, 0.5);
-    border-color: var(--text-medium-contrast);
-    color: var(--text-high-contrast);
-}
-</style>
-
+@push('scripts')
 <script>
+// Category switching functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.inventory-tab');
+    const categories = document.querySelectorAll('.inventory-category');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetCategory = this.getAttribute('data-category');
+            
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show target category, hide others
+            categories.forEach(cat => {
+                if (cat.getAttribute('data-category') === targetCategory) {
+                    cat.style.display = 'block';
+                } else {
+                    cat.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+
 // Stat allocation functionality
 let allocatedPoints = {
     str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0
@@ -713,91 +1158,6 @@ function submitStatAllocation() {
 }
 
 // Equipment functionality
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.equip-item-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const itemId = this.dataset.itemId;
-            equipPlayerItem(itemId);
-        });
-    });
-
-    document.querySelectorAll('.unequip-item-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const itemId = this.dataset.itemId;
-            unequipPlayerItem(itemId);
-        });
-    });
-    
-    // Initialize Bootstrap tooltips with custom formatting for equipment items
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        // Check if this is an equipment item with custom data
-        if (tooltipTriggerEl.hasAttribute('data-item-name')) {
-            const itemName = tooltipTriggerEl.getAttribute('data-item-name');
-            const itemRarity = tooltipTriggerEl.getAttribute('data-item-rarity');
-            const itemStats = JSON.parse(tooltipTriggerEl.getAttribute('data-item-stats') || '{}');
-            const itemAC = parseInt(tooltipTriggerEl.getAttribute('data-item-ac') || '0');
-            const itemDamage = tooltipTriggerEl.getAttribute('data-item-damage') || '';
-            const itemDamageBonus = parseInt(tooltipTriggerEl.getAttribute('data-item-damage-bonus') || '0');
-            
-            let tooltipContent = `<div class="text-center">
-                <div class="fw-bold text-${getRarityColor(itemRarity)}">${itemName}</div>
-                <div class="text-muted small">${itemRarity.charAt(0).toUpperCase() + itemRarity.slice(1)}</div>`;
-            
-            // Add damage info for weapons
-            if (itemDamage) {
-                tooltipContent += '<hr class="my-1"><div class="text-start">';
-                tooltipContent += `<div class="text-primary">🗡️ Damage: ${itemDamage}`;
-                if (itemDamageBonus > 0) {
-                    tooltipContent += `+${itemDamageBonus}`;
-                }
-                tooltipContent += '</div>';
-            }
-            
-            // Add AC info for armor
-            if (itemAC > 0) {
-                if (!itemDamage) tooltipContent += '<hr class="my-1"><div class="text-start">';
-                tooltipContent += `<div class="text-success">🛡️ AC: +${itemAC}</div>`;
-            }
-            
-            // Add stat modifiers
-            if (Object.keys(itemStats).length > 0) {
-                if (!itemDamage && itemAC === 0) tooltipContent += '<hr class="my-1"><div class="text-start">';
-                Object.keys(itemStats).forEach(stat => {
-                    if (itemStats[stat] !== 0) {
-                        const bonus = itemStats[stat];
-                        const color = bonus > 0 ? 'success' : 'danger';
-                        tooltipContent += `<div class="text-${color}">${stat.toUpperCase()}: ${bonus > 0 ? '+' : ''}${bonus}</div>`;
-                    }
-                });
-            }
-            
-            if (itemDamage || itemAC > 0 || Object.keys(itemStats).length > 0) {
-                tooltipContent += '</div>';
-            }
-            
-            tooltipContent += '</div>';
-            
-            return new bootstrap.Tooltip(tooltipTriggerEl, {
-                title: tooltipContent
-            });
-        } else {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        }
-    });
-    
-    function getRarityColor(rarity) {
-        const rarityColors = {
-            'common': 'secondary',
-            'uncommon': 'success', 
-            'rare': 'primary',
-            'epic': 'info',
-            'legendary': 'warning'
-        };
-        return rarityColors[rarity] || 'secondary';
-    }
-});
-
 function equipPlayerItem(itemId) {
     fetch(`{{ url('/game/player-item/equip') }}/${itemId}`, {
         method: 'POST',
@@ -891,13 +1251,13 @@ function selectGender(gender) {
     selectedGender = gender;
     
     document.querySelectorAll('.gender-option').forEach(btn => {
-        btn.classList.remove('btn-primary', 'active');
-        btn.classList.add('btn-outline-primary');
+        btn.classList.remove('btn-light', 'active');
+        btn.classList.add('btn-outline-light');
     });
     
     const selectedBtn = document.querySelector(`[data-gender="${gender}"]`);
-    selectedBtn.classList.remove('btn-outline-primary');
-    selectedBtn.classList.add('btn-primary', 'active');
+    selectedBtn.classList.remove('btn-outline-light');
+    selectedBtn.classList.add('btn-light', 'active');
     
     document.getElementById('confirmGenderBtn').disabled = false;
 }
@@ -954,4 +1314,4 @@ function changeGender() {
     });
 }
 </script>
-@endsection
+@endpush

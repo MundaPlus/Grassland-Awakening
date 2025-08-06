@@ -3,335 +3,508 @@
 @section('title', 'Dashboard')
 @section('meta_description', 'Your character dashboard in Grassland Awakening - view stats, weather, village info, and achievements.')
 
-@section('content')
-<div class="row g-4">
-    <!-- Character Stats -->
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header bg-primary text-white">
-                <h2 class="card-title h5 mb-0">
-                    <span aria-hidden="true">⚔️</span> Character: {{ $player->character_name }}
-                </h2>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="stat-card text-center">
-                            <div class="h6 text-muted mb-1">Level</div>
-                            <div class="h4 text-primary" aria-label="Character level {{ $player->level }}">{{ $player->level }}</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="stat-card text-center">
-                            <div class="h6 text-muted mb-1">Experience</div>
-                            <div class="h4 text-success" aria-label="Experience points {{ $player->experience }}">{{ $player->experience }}</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="stat-card text-center">
-                            <div class="h6 text-muted mb-1">Health</div>
-                            <div class="h4 {{ $player->hp < $player->max_hp * 0.3 ? 'text-danger' : 'text-info' }}" 
-                                 aria-label="Health {{ $player->hp }} out of {{ $player->max_hp }}">
-                                {{ $player->hp }}/{{ $player->max_hp }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="stat-card text-center">
-                            <div class="h6 text-muted mb-1">Gold</div>
-                            <div class="h4 text-warning" aria-label="{{ $player->persistent_currency }} gold pieces">
-                                <span aria-hidden="true">💰</span> {{ number_format($player->persistent_currency) }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Ability Scores -->
-                <div class="mt-4">
-                    <h3 class="h6 text-muted mb-3">Ability Scores</h3>
-                    <div class="row g-2 text-center">
-                        <div class="col-4">
-                            <small class="text-muted d-block">STR</small>
-                            <span class="fw-bold" aria-label="Strength {{ $player->str }}">{{ $player->str }}</span>
-                        </div>
-                        <div class="col-4">
-                            <small class="text-muted d-block">DEX</small>
-                            <span class="fw-bold" aria-label="Dexterity {{ $player->dex }}">{{ $player->dex }}</span>
-                        </div>
-                        <div class="col-4">
-                            <small class="text-muted d-block">CON</small>
-                            <span class="fw-bold" aria-label="Constitution {{ $player->con }}">{{ $player->con }}</span>
-                        </div>
-                        <div class="col-4">
-                            <small class="text-muted d-block">INT</small>
-                            <span class="fw-bold" aria-label="Intelligence {{ $player->int }}">{{ $player->int }}</span>
-                        </div>
-                        <div class="col-4">
-                            <small class="text-muted d-block">WIS</small>
-                            <span class="fw-bold" aria-label="Wisdom {{ $player->wis }}">{{ $player->wis }}</span>
-                        </div>
-                        <div class="col-4">
-                            <small class="text-muted d-block">CHA</small>
-                            <span class="fw-bold" aria-label="Charisma {{ $player->cha }}">{{ $player->cha }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+@push('styles')
+<style>
+    /* Full-screen immersive layout */
+    body {
+        overflow: hidden;
+    }
     
-    <!-- Weather & Season -->
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header bg-info text-white">
-                <h2 class="card-title h5 mb-0">
-                    <span aria-hidden="true">🌦️</span> Weather & Season
-                </h2>
+    .dashboard-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-image: url('/img/backgrounds/village.png');
+        z-index: 1;
+    }
+    
+    .dashboard-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.2));
+        z-index: 2;
+    }
+    
+    .dashboard-ui-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .dashboard-ui-container > * {
+        pointer-events: all;
+    }
+    
+    /* Welcome Panel - Top Center */
+    .welcome-panel {
+        position: absolute;
+        top: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(40, 167, 69, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px 25px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Character Status - Top Left */
+    .character-status-panel {
+        position: absolute;
+        top: 70px;
+        left: 20px;
+        width: 320px;
+        background: rgba(40, 167, 69, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Village Info - Top Right */
+    .village-info-panel {
+        position: absolute;
+        top: 70px;
+        right: 20px;
+        width: 320px;
+        background: rgba(23, 162, 184, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Weather Panel - Left Side */
+    .weather-panel {
+        position: absolute;
+        top: 420px;
+        left: 20px;
+        width: 280px;
+        background: rgba(23, 162, 184, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+    
+    /* Quick Actions - Bottom Center */
+    .quick-actions-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(33, 37, 41, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Achievements Panel - Bottom Right */
+    .achievements-panel {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        background: rgba(255, 193, 7, 0.9);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        color: #333;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Progress bars */
+    .dashboard-progress {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 5px 0;
+        height: 12px;
+    }
+    
+    .dashboard-progress-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    .health-fill {
+        background: linear-gradient(90deg, #dc3545, #e74c3c);
+    }
+    
+    .xp-fill {
+        background: linear-gradient(90deg, #28a745, #20c997);
+    }
+    
+    /* Action buttons */
+    .dashboard-btn {
+        background: linear-gradient(135deg, #495057, #6c757d);
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        margin: 5px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .dashboard-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        color: white;
+    }
+    
+    .dashboard-btn.primary { background: linear-gradient(135deg, #007bff, #0056b3); }
+    .dashboard-btn.success { background: linear-gradient(135deg, #28a745, #1e7e34); }
+    .dashboard-btn.warning { background: linear-gradient(135deg, #ffc107, #e0a800); }
+    .dashboard-btn.danger { background: linear-gradient(135deg, #dc3545, #c82333); }
+    
+    /* Stat displays */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 10px;
+    }
+    
+    .stat-item {
+        text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 5px;
+    }
+    
+    .stat-value {
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    
+    .stat-label {
+        font-size: 0.8em;
+        opacity: 0.8;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .character-status-panel, .village-info-panel {
+            width: 280px;
+        }
+        
+        .achievements-panel {
+            width: 300px;
+        }
+        
+        .weather-panel {
+            width: 250px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .character-status-panel {
+            top: 70px;
+            left: 10px;
+            width: 200px;
+            padding: 10px;
+        }
+        
+        .village-info-panel {
+            top: 70px;
+            right: 10px;
+            width: 200px;
+            padding: 10px;
+        }
+        
+        .weather-panel {
+            top: 300px;
+            left: 10px;
+            width: 180px;
+            padding: 10px;
+        }
+        
+        .quick-actions-panel {
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            transform: none;
+            padding: 10px;
+        }
+        
+        .achievements-panel {
+            display: none;
+        }
+        
+        .welcome-panel {
+            padding: 10px 15px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .character-status-panel, .village-info-panel {
+            width: 160px;
+            font-size: 0.9rem;
+        }
+        
+        .weather-panel {
+            width: 150px;
+            font-size: 0.9rem;
+        }
+        
+        .dashboard-btn {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+    }
+    
+    /* Dark theme adjustments */
+    [data-bs-theme="dark"] .dashboard-ui-container .character-status-panel {
+        background: rgba(40, 167, 69, 0.8);
+    }
+    
+    [data-bs-theme="dark"] .dashboard-ui-container .village-info-panel,
+    [data-bs-theme="dark"] .dashboard-ui-container .weather-panel {
+        background: rgba(23, 162, 184, 0.8);
+    }
+    
+    [data-bs-theme="dark"] .dashboard-ui-container .welcome-panel {
+        background: rgba(40, 167, 69, 0.8);
+    }
+</style>
+@endpush
+
+@section('content')
+<!-- Dashboard Background -->
+<div class="dashboard-background"></div>
+<div class="dashboard-overlay"></div>
+
+<!-- Dashboard UI Overlay System -->
+<div class="dashboard-ui-container">
+    <!-- Welcome Panel - Top Center -->
+    <div class="welcome-panel">
+        <h1 class="mb-1">Welcome back, {{ $player->character_name }}! 🏠</h1>
+        <p class="mb-0 small">Your village in the Grasslands awaits your leadership</p>
+    </div>
+
+    <!-- Character Status - Top Left -->
+    <div class="character-status-panel">
+        <div class="mb-2">
+            <h2 class="h6 mb-2">👤 Character Overview</h2>
+            @php
+                $playerHP = $player->hp;
+                $playerMaxHP = $player->max_hp;
+                $healthPercent = $playerMaxHP > 0 ? ($playerHP / $playerMaxHP) * 100 : 0;
+                $nextLevelXP = $player->calculateExperienceToNextLevel();
+                $currentXP = $player->experience;
+                $xpProgress = min(100, ($currentXP / $nextLevelXP) * 100);
+            @endphp
+            
+            <!-- Health Bar -->
+            <div class="mb-2">
+                <div class="small mb-1">Health</div>
+                <div class="dashboard-progress">
+                    <div class="dashboard-progress-fill health-fill" style="width: {{ $healthPercent }}%"></div>
+                </div>
+                <div class="small text-center">{{ $playerHP }}/{{ $playerMaxHP }}</div>
             </div>
-            <div class="card-body">
-                <div class="text-center mb-4">
-                    <div class="weather-indicator" aria-hidden="true">
-                        @if(isset($weather['type']))
-                            @switch($weather['type'])
-                                @case('clear')
-                                    ☀️
-                                    @break
-                                @case('rain')
-                                    🌧️
-                                    @break
-                                @case('storm')
-                                    ⛈️
-                                    @break
-                                @case('snow')
-                                    ❄️
-                                    @break
-                                @case('fog')
-                                    🌫️
-                                    @break
-                                @default
-                                    🌤️
-                            @endswitch
-                        @else
-                            🌤️
-                        @endif
-                    </div>
-                    <h3 class="h5 mb-1">{{ $weather['name'] ?? 'Pleasant Weather' }}</h3>
-                    <p class="text-muted mb-3">{{ $weather['description'] ?? 'A calm day in the grasslands.' }}</p>
-                    @if(isset($weather['real_weather_data']['temperature']))
-                        <div class="badge bg-secondary" aria-label="Temperature {{ $weather['real_weather_data']['temperature'] }} degrees celsius">
-                            🌡️ {{ $weather['real_weather_data']['temperature'] }}°C
-                        </div>
+            
+            <!-- XP Bar -->
+            <div class="mb-2">
+                <div class="small mb-1">Experience</div>
+                <div class="dashboard-progress">
+                    <div class="dashboard-progress-fill xp-fill" style="width: {{ $xpProgress }}%"></div>
+                </div>
+                <div class="small text-center">{{ number_format($currentXP) }} / {{ number_format($nextLevelXP) }}</div>
+            </div>
+            
+            <!-- Stats Grid -->
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value">{{ $player->level }}</div>
+                    <div class="stat-label">LVL</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ $player->getTotalAC() }}</div>
+                    <div class="stat-label">AC</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ number_format($player->persistent_currency) }}</div>
+                    <div class="stat-label">💰</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ $player->str }}</div>
+                    <div class="stat-label">STR</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ $player->dex }}</div>
+                    <div class="stat-label">DEX</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ $player->con }}</div>
+                    <div class="stat-label">CON</div>
+                </div>
+            </div>
+            
+            @if($player->unallocated_stat_points > 0 || $player->skill_points > 0)
+                <div class="mt-2 p-2 rounded" style="background: rgba(255, 193, 7, 0.2); border: 1px solid rgba(255, 193, 7, 0.5);">
+                    <div class="small">⚠️ Points to Allocate!</div>
+                    @if($player->unallocated_stat_points > 0)
+                        <div class="small">• {{ $player->unallocated_stat_points }} stat points</div>
+                    @endif
+                    @if($player->skill_points > 0)
+                        <div class="small">• {{ $player->skill_points }} skill points</div>
                     @endif
                 </div>
-                
-                <div class="text-center">
-                    <h3 class="h6 text-muted mb-2">Current Season</h3>
-                    <div class="d-flex align-items-center justify-content-center">
-                        <span class="me-2" aria-hidden="true">
-                            @switch($season['name'])
-                                @case('spring')
-                                    🌸
-                                    @break
-                                @case('summer')
-                                    ☀️
-                                    @break
-                                @case('autumn')
-                                    🍂
-                                    @break
-                                @case('winter')
-                                    ❄️
-                                    @break
-                                @default
-                                    🌿
-                            @endswitch
-                        </span>
-                        <span class="fw-bold">{{ ucfirst($season['name']) }}</span>
-                    </div>
-                    <small class="text-muted">{{ $season['description'] }}</small>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
-    
-    <!-- Village Overview -->
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header bg-success text-white">
-                <h2 class="card-title h5 mb-0">
-                    <span aria-hidden="true">🏘️</span> Village Overview
-                </h2>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted">Village Level</span>
-                            <span class="fw-bold fs-5" aria-label="Village level {{ $village_info['level'] }}">
-                                {{ $village_info['level'] }}
-                            </span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted">NPCs</span>
-                            <span class="fw-bold" aria-label="{{ $village_info['npc_count'] }} NPCs in village">
-                                {{ $village_info['npc_count'] }}
-                            </span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted">Specializations</span>
-                            <span class="fw-bold" aria-label="{{ count($village_info['specializations']) }} specializations unlocked">
-                                {{ count($village_info['specializations']) }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                
-                @if(!empty($village_info['specializations']))
-                    <div class="mt-3">
-                        <h3 class="h6 text-muted mb-2">Active Specializations</h3>
-                        @foreach($village_info['specializations'] as $spec)
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="badge bg-primary me-2" aria-label="{{ $spec->getSpecializationName() }} level {{ $spec->level }}">
-                                    Lv.{{ $spec->level }}
-                                </span>
-                                <small>{{ $spec->getSpecializationName() }}</small>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-                
-                <div class="text-center mt-3">
-                    <a href="{{ route('game.village') }}" class="btn btn-success" aria-describedby="village-link-desc">
-                        Manage Village
-                    </a>
-                    <div id="village-link-desc" class="sr-only">Go to village management page to view and manage your NPCs and specializations</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Recent Achievements & Reputation Summary -->
-<div class="row g-4 mt-2">
-    <!-- Recent Achievements -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header bg-warning text-dark">
-                <h2 class="card-title h5 mb-0">
-                    <span aria-hidden="true">🏆</span> Recent Achievements
-                </h2>
-            </div>
-            <div class="card-body">
-                @if(!empty($achievements['unlocked']) && count($achievements['unlocked']) > 0)
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">Total Points</span>
-                            <span class="fw-bold text-warning" aria-label="{{ $achievements['total_points'] }} achievement points">
-                                {{ $achievements['total_points'] }}
-                            </span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">Achievements</span>
-                            <span class="fw-bold" aria-label="{{ $achievements['achievement_count'] }} achievements unlocked">
-                                {{ $achievements['achievement_count'] }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="list-group list-group-flush">
-                        @foreach(array_slice($achievements['unlocked'], 0, 3) as $achievement)
-                            <div class="list-group-item px-0 border-0 d-flex align-items-center">
-                                <span class="achievement-icon me-3" aria-hidden="true">{{ $achievement['icon'] }}</span>
-                                <div class="flex-grow-1">
-                                    <div class="fw-bold">{{ $achievement['name'] }}</div>
-                                    <small class="text-muted">{{ $achievement['description'] }}</small>
-                                    <div class="mt-1">
-                                        <span class="badge bg-warning text-dark" aria-label="{{ $achievement['points'] }} points">
-                                            {{ $achievement['points'] }} pts
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="text-center text-muted py-4">
-                        <span aria-hidden="true">🎯</span>
-                        <p class="mb-2">No achievements yet!</p>
-                        <small>Complete adventures, manage your village, and interact with NPCs to unlock achievements.</small>
-                    </div>
-                @endif
-                
-                <div class="text-center mt-3">
-                    <a href="{{ route('game.achievements') }}" class="btn btn-warning" aria-describedby="achievements-link-desc">
-                        View All Achievements
-                    </a>
-                    <div id="achievements-link-desc" class="sr-only">Go to achievements page to view all available achievements and track your progress</div>
+    <!-- Village Info - Top Right -->
+    <div class="village-info-panel">
+        <div class="mb-2">
+            <h2 class="h6 mb-2">🏘️ Your Village</h2>
+            
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value">{{ $village_info['level'] }}</div>
+                    <div class="stat-label">Level</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ $village_info['npc_count'] }}</div>
+                    <div class="stat-label">NPCs</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ count($village_info['specializations']) }}</div>
+                    <div class="stat-label">Specs</div>
                 </div>
             </div>
+
+            @if(!empty($village_info['specializations']) && count($village_info['specializations']) > 0)
+                <div class="mt-2">
+                    <div class="small mb-1">Specializations:</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach(array_slice($village_info['specializations']->toArray(), 0, 4) as $spec)
+                            <span class="badge bg-light text-dark small">
+                                {{ Str::limit($spec->getSpecializationName(), 10) }} {{ $spec->level }}
+                            </span>
+                        @endforeach
+                        @if(count($village_info['specializations']) > 4)
+                            <span class="badge bg-secondary small">+{{ count($village_info['specializations']) - 4 }}</span>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
-    
-    {{-- Reputation Summary - Hidden for now
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <h2 class="card-title h5 mb-0">
-                    <span aria-hidden="true">⚖️</span> Reputation Summary
-                </h2>
+
+    <!-- Weather Panel - Left Side -->
+    <div class="weather-panel">
+        <div class="mb-1">
+            <div class="fw-bold small">🌤️ Weather</div>
+        </div>
+        <div style="font-size: 2rem; margin-bottom: 8px;">
+            @if(isset($weather['type']))
+                @switch($weather['type'])
+                    @case('clear') ☀️ @break
+                    @case('rain') 🌧️ @break
+                    @case('storm') ⛈️ @break
+                    @case('snow') ❄️ @break
+                    @case('fog') 🌫️ @break
+                    @default 🌤️
+                @endswitch
+            @else
+                🌤️
+            @endif
+        </div>
+        <div class="small fw-bold">{{ $weather['name'] ?? 'Pleasant Weather' }}</div>
+        <div class="small">🍃 {{ ucfirst($season['name']) }}</div>
+        @if(isset($weather['real_weather_data']['temperature']))
+            <div class="small">🌡️ {{ $weather['real_weather_data']['temperature'] }}°C</div>
+        @endif
+    </div>
+
+    <!-- Quick Actions - Bottom Center -->
+    <div class="quick-actions-panel">
+        <div class="mb-2 text-center text-white">
+            <div class="fw-bold small">Quick Actions</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap justify-content-center">
+            <a href="{{ route('game.adventures') }}" class="dashboard-btn danger">
+                🗺️ Adventure
+            </a>
+            <a href="{{ route('game.character') }}" class="dashboard-btn primary">
+                👤 Character
+            </a>
+            <a href="{{ route('game.inventory') }}" class="dashboard-btn warning">
+                🎒 Inventory
+            </a>
+            <a href="{{ route('game.village') }}" class="dashboard-btn success">
+                🏘️ Village
+            </a>
+            <a href="{{ route('game.skills') }}" class="dashboard-btn primary">
+                🎯 Skills
+            </a>
+        </div>
+    </div>
+
+    <!-- Achievements Panel - Bottom Right -->
+    <div class="achievements-panel">
+        <div class="mb-2">
+            <div class="fw-bold">🏆 Achievements</div>
+        </div>
+        <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="text-center">
+                <div class="fw-bold">{{ $achievements['total_points'] ?? 0 }}</div>
+                <small>Points</small>
             </div>
-            <div class="card-body">
-                @if(!empty($reputations))
-                    @foreach($reputations as $rep)
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="d-flex align-items-center">
-                                    <span aria-hidden="true" class="me-2">{{ $rep['faction_icon'] }}</span>
-                                    {{ $rep['faction_name'] }}
-                                </span>
-                                <span class="fw-bold" style="color: {{ $rep['level']['color'] }}" 
-                                      aria-label="{{ $rep['faction_name'] }} reputation: {{ $rep['level']['name'] }} with score {{ $rep['current_score'] }}">
-                                    {{ $rep['level']['name'] }}
-                                </span>
-                            </div>
-                            <div class="reputation-bar">
-                                @php
-                                    $progress = $rep['progress_to_next'];
-                                    $percentage = $progress ? $progress['percentage'] : 100;
-                                @endphp
-                                <div class="reputation-progress" 
-                                     style="width: {{ $percentage }}%; background-color: {{ $rep['level']['color'] }}"
-                                     role="progressbar" 
-                                     aria-valuenow="{{ $percentage }}" 
-                                     aria-valuemin="0" 
-                                     aria-valuemax="100"
-                                     aria-label="Progress to next reputation level: {{ round($percentage, 1) }}%">
-                                </div>
-                            </div>
-                            @if($progress)
-                                <small class="text-muted">
-                                    {{ $progress['progress'] }}/{{ $progress['needed'] }} to {{ $progress['next_level_name'] }}
-                                </small>
-                            @endif
-                        </div>
+            <div class="text-center">
+                <div class="fw-bold">{{ $achievements['achievement_count'] ?? 0 }}</div>
+                <small>Unlocked</small>
+            </div>
+        </div>
+        @if(!empty($achievements['unlocked']) && count($achievements['unlocked']) > 0)
+            <div class="mb-2">
+                <div class="d-flex gap-1 flex-wrap">
+                    @foreach(array_slice($achievements['unlocked'], 0, 6) as $achievement)
+                        <span title="{{ $achievement['name'] }}: {{ $achievement['description'] }}">{{ $achievement['icon'] }}</span>
                     @endforeach
-                @else
-                    <div class="text-center text-muted py-4">
-                        <span aria-hidden="true">🤝</span>
-                        <p class="mb-2">Build relationships with factions!</p>
-                        <small>Complete quests and make choices to gain or lose reputation with various factions.</small>
-                    </div>
-                @endif
-                
-                <div class="text-center mt-3">
-                    <a href="{{ route('game.reputation') }}" class="btn btn-secondary" aria-describedby="reputation-link-desc">
-                        View All Factions
-                    </a>
-                    <div id="reputation-link-desc" class="sr-only">Go to reputation page to view detailed faction relationships and benefits</div>
+                    @if(count($achievements['unlocked']) > 6)
+                        <span class="small">+{{ count($achievements['unlocked']) - 6 }}</span>
+                    @endif
                 </div>
             </div>
+        @endif
+        <div class="text-center">
+            <a href="{{ route('game.achievements') }}" class="dashboard-btn primary">
+                View All
+            </a>
         </div>
     </div>
-    --}}
 </div>
-
 @endsection

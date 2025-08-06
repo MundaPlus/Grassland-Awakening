@@ -6,16 +6,26 @@
 
 @section("content")
     <!-- Hero Section -->
-    <section class="relative overflow-hidden" style="background: linear-gradient(135deg, #2c5530 0%, #5a8a3a 100%); min-height: 100vh;">
+    <section class="hero-section relative overflow-hidden min-h-screen">
+        <!-- Dynamic Background -->
+        <div class="hero-background"></div>
+        <div class="hero-overlay"></div>
 
-        <div class="relative mx-auto max-w-screen-xl px-4 py-24 text-center sm:px-12 flex items-center min-h-screen">
+        <div class="relative mx-auto max-w-screen-xl px-4 py-24 text-center sm:px-12 flex items-center min-h-screen z-10">
             <div class="w-full">
                 <!-- Game Logo/Title -->
                 <div class="mb-8 flex justify-center items-center">
-                    <div class="bg-white bg-opacity-90 rounded-lg p-6 shadow-2xl backdrop-blur-sm">
-                        <img src="{{ asset('pixel_art/player_1.png') }}" alt="Hero" class="hero-character mx-auto mb-4 pixelated">
-                        <h1 class="text-5xl font-bold text-green-800 mb-2">Grassland Awakening</h1>
-                        <p class="text-green-600 text-lg">A Fantasy RPG Adventure</p>
+                    <div class="hero-title-card">
+                        <div class="hero-character-wrapper">
+                            <img src="{{ asset('img/player_male.png') }}" alt="Hero" class="hero-character">
+                        </div>
+                        <h1 class="hero-title">Grassland Awakening</h1>
+                        <p class="hero-subtitle">A Fantasy RPG Adventure</p>
+                        <div class="hero-decoration">
+                            <span class="decoration-element">⚔️</span>
+                            <span class="decoration-element">🏰</span>
+                            <span class="decoration-element">✨</span>
+                        </div>
                     </div>
                 </div>
 
@@ -27,42 +37,45 @@
                         immersive fantasy RPG experience.
                     </p>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                        <div class="text-center">
-                            <img src="{{ asset('pixel_art/village_2.png') }}" alt="Village Building" class="feature-icon mx-auto mb-3 pixelated">
-                            <h3 class="font-bold text-lg text-yellow-300">Village Building</h3>
-                            <p class="text-sm text-gray-300">Create and manage your own thriving village</p>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon-wrapper">
+                                <img src="{{ asset('img/npc_vendor_male.png') }}" alt="Village Building" class="feature-icon">
+                            </div>
+                            <h3 class="feature-title village-feature">Village Building</h3>
+                            <p class="feature-description">Create and manage your own thriving village</p>
                         </div>
-                        <div class="text-center">
-                            <img src="{{ asset('pixel_art/npc__enemy_goblin.png') }}" alt="Combat" class="feature-icon mx-auto mb-3 pixelated">
-                            <h3 class="font-bold text-lg text-red-300">Epic Combat</h3>
-                            <p class="text-sm text-gray-300">Engage in strategic turn-based battles</p>
+                        <div class="feature-card">
+                            <div class="feature-icon-wrapper">
+                                <img src="{{ asset('img/enemies/goblin.png') }}" alt="Combat" class="feature-icon">
+                            </div>
+                            <h3 class="feature-title combat-feature">Epic Combat</h3>
+                            <p class="feature-description">Engage in strategic turn-based battles</p>
                         </div>
-                        <div class="text-center">
-                            <img src="{{ asset('pixel_art/bg_field_day.png') }}" alt="Exploration" class="feature-icon mx-auto mb-3 pixelated">
-                            <h3 class="font-bold text-lg text-blue-300">Endless Adventures</h3>
-                            <p class="text-sm text-gray-300">Discover procedurally generated quests</p>
+                        <div class="feature-card">
+                            <div class="feature-icon-wrapper">
+                                <i class="fas fa-map text-4xl text-blue-300"></i>
+                            </div>
+                            <h3 class="feature-title adventure-feature">Endless Adventures</h3>
+                            <p class="feature-description">Discover procedurally generated quests</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-6">
+                <div class="hero-actions">
                     @auth
-                        <a href="{{ route('game.dashboard') }}" 
-                           class="inline-flex items-center justify-center rounded-lg bg-green-600 px-8 py-4 text-xl font-bold text-white hover:bg-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
-                            <img src="{{ asset('pixel_art/player_2.png') }}" alt="Play" class="button-icon mr-3 pixelated">
-                            Enter Game
+                        <a href="{{ route('game.dashboard') }}" class="hero-button primary-button">
+                            <i class="fas fa-play-circle mr-3"></i>
+                            Enter Your Village
                         </a>
                     @else
-                        <a href="{{ route('register') }}" 
-                           class="inline-flex items-center justify-center rounded-lg bg-green-600 px-8 py-4 text-xl font-bold text-white hover:bg-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
-                            <img src="{{ asset('pixel_art/player_3.png') }}" alt="Start" class="button-icon mr-3 pixelated">
+                        <a href="{{ route('register') }}" class="hero-button primary-button">
+                            <i class="fas fa-user-plus mr-3"></i>
                             Start Your Adventure
                         </a>
-                        <a href="{{ route('login') }}" 
-                           class="inline-flex items-center justify-center rounded-lg border-2 border-white bg-transparent px-8 py-4 text-xl font-bold text-white hover:bg-white hover:text-green-600 transform hover:scale-105 transition-all duration-200 shadow-lg">
-                            <img src="{{ asset('pixel_art/player_4.png') }}" alt="Login" class="button-icon mr-3 pixelated">
+                        <a href="{{ route('login') }}" class="hero-button secondary-button">
+                            <i class="fas fa-sign-in-alt mr-3"></i>
                             Continue Journey
                         </a>
                     @endauth
@@ -72,7 +85,7 @@
     </section>
 
     <!-- Game Features Section -->
-    <section class="bg-gradient-to-b from-green-50 to-blue-50 py-20">
+    <section class="bg-gradient-to-b from-green-50 to-blue-50 py-20" style="display: none;" id="features-section">
         <div class="container mx-auto px-4">
             <div class="text-center mb-16">
                 <h2 class="text-4xl font-bold text-gray-800 mb-4">Game Features</h2>
@@ -83,9 +96,9 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <!-- Feature 1: Village Management -->
-                <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
-                    <div class="text-center mb-4">
-                        <img src="{{ asset('pixel_art/village_3.png') }}" alt="Village Management" class="feature-icon mx-auto pixelated">
+                <div class="features-card village-card">
+                    <div class="features-icon-container">
+                        <img src="{{ asset('img/village.png') }}" alt="Village Management" class="features-icon">
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-3">Village Management</h3>
                     <p class="text-gray-600 mb-4">Build and customize your village with unique NPCs, each with their own skills and personalities. Watch your settlement grow and specialize based on your choices.</p>
@@ -170,7 +183,7 @@
     </section>
 
     <!-- Screenshots/Game Preview Section -->
-    <section class="bg-gray-900 py-20">
+    <section class="bg-gray-900 py-20" style="display: none;" id="preview-section">
         <div class="container mx-auto px-4">
             <div class="text-center mb-16">
                 <h2 class="text-4xl font-bold text-white mb-4">Game Preview</h2>
@@ -221,7 +234,7 @@
     </section>
 
     <!-- Call to Action -->
-    <section class="bg-gradient-to-r from-green-600 to-blue-600 py-16">
+    <section class="bg-gradient-to-r from-green-600 to-blue-600 py-16" style="display: none;" id="cta-section">
         <div class="container mx-auto px-4 text-center">
             <div class="max-w-3xl mx-auto">
                 <h2 class="text-4xl font-bold text-white mb-6">Ready to Begin Your Adventure?</h2>
@@ -255,120 +268,371 @@
     @include("frontend.includes.messages")
 
     <style>
-        .pixelated {
-            image-rendering: -moz-crisp-edges;
-            image-rendering: -webkit-crisp-edges;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            width: auto;
-            height: auto;
-            max-width: 100%;
+        /* Hero Section Styles */
+        .hero-section {
+            position: relative;
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 50%, #2d3748 100%);
+            overflow: hidden;
         }
         
-        /* Fix image container sizing */
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('{{ asset('img/village.png') }}') center/cover no-repeat;
+            background-attachment: fixed;
+            z-index: 1;
+        }
+        
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(139, 69, 19, 0.2), rgba(160, 82, 45, 0.3));
+            z-index: 2;
+        }
+        
+        .hero-title-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border: 3px solid #d4a574;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: perspective(1000px) rotateX(5deg);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-title-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #d4a574, #f4e4bc, #d4a574);
+            z-index: -1;
+            border-radius: 20px;
+        }
+        
+        .hero-title-card:hover {
+            transform: perspective(1000px) rotateX(0deg) scale(1.02);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+        }
+        
+        .hero-character-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .hero-character {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+        }
+        
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #8b4513, #d4a574, #8b4513);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            font-family: Georgia, "Times New Roman", Times, serif;
+        }
+        
+        .hero-subtitle {
+            color: #8b4513;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-decoration {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        .decoration-element {
+            font-size: 1.5rem;
+            animation: pulse 2s ease-in-out infinite alternate;
+        }
+        
+        .decoration-element:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+        
+        .decoration-element:nth-child(3) {
+            animation-delay: 1s;
+        }
+        
+        .hero-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .hero-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            min-width: 200px;
+        }
+        
+        .primary-button {
+            background: linear-gradient(135deg, #8b4513, #a0522d);
+            color: white;
+            border: 2px solid #d4a574;
+        }
+        
+        .primary-button:hover {
+            background: linear-gradient(135deg, #a0522d, #bc6c42);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+            color: white;
+        }
+        
+        .secondary-button {
+            background: rgba(255, 255, 255, 0.9);
+            color: #8b4513;
+            border: 2px solid #d4a574;
+        }
+        
+        .secondary-button:hover {
+            background: rgba(212, 165, 116, 0.2);
+            transform: translateY(-2px);
+            color: #8b4513;
+        }
+        
+        /* Feature Cards in Hero */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(212, 165, 116, 0.6);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border-color: #d4a574;
+        }
+        
+        .feature-icon-wrapper {
+            margin-bottom: 1rem;
+        }
+        
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+        }
+        
+        .feature-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .village-feature { color: #d69e2e; }
+        .combat-feature { color: #e53e3e; }
+        .adventure-feature { color: #3182ce; }
+        
+        .feature-description {
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+        
+        /* Features Section */
+        .features-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(212, 165, 116, 0.3);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .features-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #d4a574, #f4e4bc, #d4a574);
+        }
+        
+        .features-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            border-color: #d4a574;
+        }
+        
+        .features-icon-container {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .features-icon {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border-radius: 10px;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+        }
+        
+        /* Game Preview */
         .game-preview img {
             width: 100%;
             height: 200px;
             object-fit: cover;
             object-position: center;
+            border-radius: 8px;
         }
         
-        .feature-icon {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-        }
-        
-        .hero-character {
-            width: auto;
-            height: auto;
-            max-width: 80px;
-            max-height: 80px;
-        }
-        
-        .button-icon {
-            width: 32px;
-            height: 32px;
-            object-fit: contain;
-        }
-        
-        /* Background animation containers */
-        .bg-character {
-            width: 64px;
-            height: 64px;
-            object-fit: contain;
-        }
-        
+        /* Animations */
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-15px); }
         }
         
-        .animate-float {
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 53%, 80%, 100% {
-                transform: translate3d(0,0,0);
-            }
-            40%, 43% {
-                transform: translate3d(0, -30px, 0);
-            }
-            70% {
-                transform: translate3d(0, -15px, 0);
-            }
-            90% {
-                transform: translate3d(0, -4px, 0);
-            }
-        }
-        
-        .animate-bounce {
-            animation: bounce 2s infinite;
-        }
         
         @keyframes pulse {
             0%, 100% {
                 opacity: 1;
+                transform: scale(1);
             }
             50% {
-                opacity: .5;
+                opacity: 0.8;
+                transform: scale(1.1);
             }
         }
         
         .animate-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            animation: pulse 2s ease-in-out infinite;
         }
         
-        /* Responsive fixes */
+        /* Responsive Design */
+        @media (min-width: 640px) {
+            .hero-actions {
+                flex-direction: row;
+                gap: 1.5rem;
+            }
+        }
+        
         @media (max-width: 768px) {
-            .hero-character {
-                max-width: 60px;
-                max-height: 60px;
+            .hero-background {
+                background-attachment: scroll;
             }
             
-            .feature-icon {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-character {
                 width: 60px;
                 height: 60px;
             }
             
-            .button-icon {
-                width: 24px;
-                height: 24px;
+            .feature-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
             }
             
-            .bg-character {
-                width: 48px;
-                height: 48px;
+            .hero-title-card {
+                padding: 1.5rem;
+                transform: none;
+            }
+            
+            .hero-title-card:hover {
+                transform: scale(1.02);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+            
+            .hero-button {
+                padding: 0.75rem 1.5rem;
+                font-size: 1rem;
+                min-width: 180px;
             }
         }
         
         @media (prefers-reduced-motion: reduce) {
             .animate-bounce,
             .animate-pulse,
-            .animate-float {
+            .animate-float,
+            .decoration-element {
                 animation: none;
             }
+            
+            .hero-title-card,
+            .features-card,
+            .hero-button {
+                transition: none;
+            }
         }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .hero-title-card {
+                background: rgba(45, 55, 72, 0.95);
+                color: white;
+            }
+            
+            .hero-subtitle {
+                color: #d4a574;
+            }
+            
+            .features-card {
+                background: rgba(45, 55, 72, 0.95);
+                color: white;
+            }
+        }
+        
+        /* Using system fonts for CSP compliance */
     </style>
 @endsection

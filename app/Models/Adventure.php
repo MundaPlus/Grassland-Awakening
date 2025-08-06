@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\HasObfuscatedId;
 
 class Adventure extends Model
 {
+    use HasObfuscatedId;
     protected $fillable = [
         'player_id',
         'road',

@@ -3,335 +3,508 @@
 @section('title', 'Achievements')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Achievements Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-warning">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h1 class="h3 mb-2">Achievements</h1>
-                            <p class="text-muted mb-0">Track your progress and unlock special rewards</p>
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <div class="achievement-stats">
-                                <span class="badge bg-warning fs-6" aria-label="Achievement progress {{ $unlockedCount }} out of {{ $totalCount }}">
-                                    {{ $unlockedCount }} / {{ $totalCount }} Unlocked
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<style>
+    .game-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-image: url('/img/backgrounds/achievements.png');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        z-index: 1;
+    }
+
+    .overlay-content {
+        position: relative;
+        z-index: 10;
+        width: 100vw;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .title-panel {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 400px;
+        z-index: 15;
+    }
+
+    .achievements-panel {
+        position: absolute;
+        top: 140px;
+        left: 20px;
+        width: calc(100% - 40px);
+        max-width: 1200px;
+        left: 50%;
+        transform: translateX(-50%);
+        height: calc(100vh - 240px);
+        overflow-y: auto;
+        z-index: 12;
+    }
+
+    .stats-panel {
+        position: absolute;
+        top: 140px;
+        right: 20px;
+        width: 300px;
+        height: 400px;
+        overflow-y: auto;
+        z-index: 12;
+    }
+
+    .filter-panel {
+        position: absolute;
+        top: 140px;
+        left: 20px;
+        width: 280px;
+        height: 500px;
+        overflow-y: auto;
+        z-index: 12;
+    }
+
+    .quick-actions {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 90vw;
+    }
+
+    .dashboard-btn {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 120px;
+        justify-content: center;
+    }
+
+    .dashboard-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .achievement-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .achievement-card:hover {
+        background: rgba(255, 255, 255, 0.12);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .achievement-card.unlocked {
+        border-left: 4px solid #ffc107;
+        background: rgba(255, 193, 7, 0.1);
+    }
+
+    .achievement-card.locked {
+        opacity: 0.7;
+        background: rgba(108, 117, 125, 0.1);
+    }
+
+    .achievement-card.recent {
+        border: 2px solid #28a745;
+        animation: pulse 2s infinite;
+        background: rgba(40, 167, 69, 0.15);
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        }
+    }
+
+    .filter-btn {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        margin: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: block;
+        width: calc(100% - 10px);
+        text-align: center;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 15px;
+        color: white;
+    }
+
+    .text-white {
+        color: white !important;
+    }
+
+    .progress {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        background: linear-gradient(90deg, #28a745, #20c997);
+        color: white;
+        text-align: center;
+        line-height: 1.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    @media (max-width: 1400px) {
+        .achievements-panel {
+            left: 320px;
+            width: calc(100% - 660px);
+        }
+    }
+
+    @media (max-width: 1200px) {
+        .filter-panel,
+        .stats-panel {
+            display: none;
+        }
+        .achievements-panel {
+            left: 20px;
+            width: calc(100% - 40px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .title-panel {
+            width: 90%;
+        }
+        .achievements-panel {
+            top: 160px;
+            height: calc(100vh - 260px);
+        }
+        .quick-actions {
+            bottom: 10px;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .dashboard-btn {
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            min-width: 100px;
+        }
+    }
+</style>
+
+<div class="game-overlay"></div>
+
+<div class="overlay-content">
+    <!-- Title Panel -->
+    <div class="title-panel">
+        <div class="glass-panel p-4 text-center">
+            <h1 class="text-white mb-2">🏆 Achievements</h1>
+            <p class="text-white mb-0 opacity-75">Track your legendary accomplishments</p>
+        </div>
+    </div>
+
+    <!-- Filter Panel (Desktop) -->
+    <div class="filter-panel d-none d-lg-block">
+        <div class="glass-panel p-3">
+            <h5 class="text-white mb-3">📂 Categories</h5>
+            <button class="filter-btn active" onclick="filterAchievements('all')" id="filter-all">
+                🌟 All
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('combat')" id="filter-combat">
+                ⚔️ Combat
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('exploration')" id="filter-exploration">
+                🗺️ Exploration
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('crafting')" id="filter-crafting">
+                🔨 Crafting
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('equipment')" id="filter-equipment">
+                🛡️ Equipment
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('character')" id="filter-character">
+                👤 Character
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('economy')" id="filter-economy">
+                💰 Economy
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('village')" id="filter-village">
+                🏘️ Village
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('social')" id="filter-social">
+                👥 Social
+            </button>
+            <button class="filter-btn" onclick="filterAchievements('secret')" id="filter-secret">
+                🔮 Secret
+            </button>
+            
+            <div class="mt-3">
+                <label class="text-white">
+                    <input type="checkbox" id="showOnlyUnlocked" onchange="toggleUnlockedOnly()">
+                    <span class="ms-2">✅ Unlocked Only</span>
+                </label>
             </div>
         </div>
     </div>
 
-    <!-- Achievement Categories Filter -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <div class="btn-group flex-wrap" role="group" aria-label="Achievement categories">
-                                <button type="button" class="btn btn-outline-primary active" onclick="filterAchievements('all')" id="filter-all">
-                                    All
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('combat')" id="filter-combat">
-                                    Combat
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('exploration')" id="filter-exploration">
-                                    Exploration
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('crafting')" id="filter-crafting">
-                                    Crafting
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('equipment')" id="filter-equipment">
-                                    Equipment
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('character')" id="filter-character">
-                                    Character
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('economy')" id="filter-economy">
-                                    Economy
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('village')" id="filter-village">
-                                    Village
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('social')" id="filter-social">
-                                    Social
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="filterAchievements('secret')" id="filter-secret">
-                                    Secret
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showOnlyUnlocked" onchange="toggleUnlockedOnly()">
-                                <label class="form-check-label" for="showOnlyUnlocked">
-                                    Show only unlocked
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Stats Panel (Desktop) -->
+    <div class="stats-panel d-none d-lg-block">
+        <div class="glass-panel p-3">
+            <h5 class="text-white mb-3">📊 Statistics</h5>
+            <div class="stat-card">
+                <div class="h4 text-warning">{{ $unlockedCount ?? 0 }}</div>
+                <div class="text-white opacity-75">🏆 Unlocked</div>
+            </div>
+            <div class="stat-card">
+                <div class="h4 text-muted">{{ ($totalCount ?? 0) - ($unlockedCount ?? 0) }}</div>
+                <div class="text-white opacity-75">🔒 Remaining</div>
+            </div>
+            <div class="stat-card">
+                <div class="h4 text-info">{{ ($totalCount ?? 1) > 0 ? round((($unlockedCount ?? 0) / ($totalCount ?? 1)) * 100) : 0 }}%</div>
+                <div class="text-white opacity-75">📈 Completion</div>
+            </div>
+            <div class="stat-card">
+                <div class="h4 text-success">{{ $totalPoints ?? 0 }}</div>
+                <div class="text-white opacity-75">⭐ Points</div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Achievements -->
-    @if($recentAchievements->isNotEmpty())
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-success">
-                <div class="card-header bg-success text-white">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-trophy" aria-hidden="true"></i> Recently Unlocked
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        @foreach($recentAchievements as $achievement)
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card achievement-card unlocked recent" role="article" aria-labelledby="achievement-{{ $achievement->id }}">
-                                <div class="card-body text-center">
-                                    <div class="achievement-icon mb-2">
-                                        <i class="fas fa-trophy fa-2x text-warning" aria-hidden="true"></i>
-                                    </div>
-                                    <h3 class="h6 text-warning mb-1" id="achievement-{{ $achievement->id }}">{{ $achievement->name }}</h3>
-                                    <p class="small text-muted mb-2">{{ $achievement->description }}</p>
-                                    <div class="achievement-meta">
-                                        <span class="badge bg-success" aria-label="Unlocked on {{ $achievement->pivot->unlocked_at->format('M j, Y') }}">
-                                            <i class="fas fa-check" aria-hidden="true"></i> {{ $achievement->pivot->unlocked_at->diffForHumans() }}
-                                        </span>
+    <!-- Achievements Panel -->
+    <div class="achievements-panel">
+        <div class="glass-panel p-4">
+            <!-- Recent Achievements -->
+            @if(isset($recentAchievements) && $recentAchievements->isNotEmpty())
+            <div class="mb-4">
+                <h5 class="text-warning mb-3">🎉 Recently Unlocked</h5>
+                <div class="row">
+                    @foreach($recentAchievements as $achievement)
+                    <div class="col-lg-6 mb-3">
+                        <div class="achievement-card unlocked recent p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div style="font-size: 2rem;">🏆</div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="text-warning mb-1">{{ $achievement->name }}</h6>
+                                    <p class="text-white opacity-75 mb-2 small">{{ $achievement->description }}</p>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="badge bg-success">✅ Unlocked</span>
+                                        <small class="text-white opacity-50">{{ $achievement->pivot->unlocked_at->diffForHumans() }}</small>
                                     </div>
                                     @if($achievement->rewards)
-                                    <div class="achievement-rewards mt-2">
-                                        <small class="text-success">
-                                            <i class="fas fa-gift" aria-hidden="true"></i> {{ $achievement->rewards }}
-                                        </small>
+                                    <div class="mt-2">
+                                        <small class="text-success">🎁 {{ $achievement->rewards }}</small>
                                     </div>
                                     @endif
                                 </div>
                             </div>
                         </div>
-                        @endforeach
                     </div>
+                    @endforeach
                 </div>
             </div>
-        </div>
-    </div>
-    @endif
+            @endif
 
-    <!-- All Achievements -->
-    <div class="row">
-        @foreach($achievements as $achievement)
-        <div class="col-md-6 col-lg-4 mb-4 achievement-item" 
-             data-category="{{ $achievement->category }}" 
-             data-unlocked="{{ $achievement->pivot ? 'true' : 'false' }}">
-            <div class="card h-100 achievement-card {{ $achievement->pivot ? 'unlocked' : 'locked' }}" 
-                 role="article" 
-                 aria-labelledby="achievement-{{ $achievement->id }}"
-                 aria-describedby="achievement-desc-{{ $achievement->id }}">
-                <div class="card-body">
-                    <div class="row align-items-start">
-                        <div class="col-3 text-center">
-                            <div class="achievement-icon">
-                                @if($achievement->pivot)
-                                <i class="fas fa-trophy fa-2x text-warning" aria-hidden="true"></i>
+            <!-- All Achievements -->
+            <div class="row">
+                @if(isset($achievements))
+                @foreach($achievements as $achievement)
+                <div class="col-lg-6 mb-3 achievement-item" 
+                     data-category="{{ $achievement->category ?? 'general' }}" 
+                     data-unlocked="{{ isset($achievement->pivot) ? 'true' : 'false' }}">
+                    <div class="achievement-card {{ isset($achievement->pivot) ? 'unlocked' : 'locked' }} p-3">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 text-center" style="min-width: 60px;">
+                                @if(isset($achievement->pivot))
+                                <div style="font-size: 2rem;">🏆</div>
                                 @else
-                                <i class="fas fa-lock fa-2x text-muted" aria-hidden="true"></i>
+                                <div style="font-size: 2rem; opacity: 0.5;">🔒</div>
                                 @endif
                             </div>
-                        </div>
-                        <div class="col-9">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h3 class="h6 mb-0 {{ $achievement->pivot ? 'text-warning' : 'text-muted' }}" id="achievement-{{ $achievement->id ?? $loop->index }}">
-                                    {{ $achievement->name }}
-                                </h3>
-                                @php
-                                    $categoryColors = [
-                                        'combat' => 'danger',
-                                        'exploration' => 'success', 
-                                        'crafting' => 'warning',
-                                        'equipment' => 'primary',
-                                        'character' => 'info',
-                                        'economy' => 'warning',
-                                        'village' => 'secondary',
-                                        'social' => 'info',
-                                        'secret' => 'dark'
-                                    ];
-                                    $badgeColor = $categoryColors[$achievement->category] ?? 'secondary';
-                                @endphp
-                                <span class="badge bg-{{ $badgeColor }}" 
-                                      aria-label="Category {{ $achievement->category }}">
-                                    {{ ucfirst($achievement->category) }}
-                                </span>
-                            </div>
-                            
-                            <p class="small {{ $achievement->pivot ? 'text-body' : 'text-muted' }} mb-2" id="achievement-desc-{{ $achievement->id ?? $loop->index }}">
-                                {{ $achievement->description }}
-                            </p>
-
-                            <!-- Progress Bar for Trackable Achievements -->
-                            @if($achievement->is_progress_based && !$achievement->pivot)
-                            <div class="progress mb-2" role="progressbar" 
-                                 aria-valuenow="{{ $achievement->current_progress ?? 0 }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="{{ $achievement->target_value }}"
-                                 aria-label="Achievement progress {{ $achievement->current_progress ?? 0 }} out of {{ $achievement->target_value }}">
-                                @php
-                                    $progressPercent = $achievement->target_value > 0 ? (($achievement->current_progress ?? 0) / $achievement->target_value) * 100 : 0;
-                                @endphp
-                                <div class="progress-bar" style="width: {{ $progressPercent }}%">
-                                    {{ $achievement->current_progress ?? 0 }} / {{ $achievement->target_value }}
-                                </div>
-                            </div>
-                            @endif
-
-                            <!-- Achievement Status -->
-                            <div class="achievement-status">
-                                @if($achievement->pivot)
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="badge bg-success" aria-label="Achievement unlocked">
-                                        <i class="fas fa-check" aria-hidden="true"></i> Unlocked
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="{{ isset($achievement->pivot) ? 'text-warning' : 'text-white opacity-50' }} mb-0">
+                                        {{ $achievement->name ?? 'Unknown Achievement' }}
+                                    </h6>
+                                    @php
+                                        $categoryEmojis = [
+                                            'combat' => '⚔️',
+                                            'exploration' => '🗺️', 
+                                            'crafting' => '🔨',
+                                            'equipment' => '🛡️',
+                                            'character' => '👤',
+                                            'economy' => '💰',
+                                            'village' => '🏘️',
+                                            'social' => '👥',
+                                            'secret' => '🔮'
+                                        ];
+                                        $categoryColors = [
+                                            'combat' => 'danger',
+                                            'exploration' => 'success', 
+                                            'crafting' => 'warning',
+                                            'equipment' => 'primary',
+                                            'character' => 'info',
+                                            'economy' => 'warning',
+                                            'village' => 'secondary',
+                                            'social' => 'info',
+                                            'secret' => 'dark'
+                                        ];
+                                        $category = $achievement->category ?? 'general';
+                                        $emoji = $categoryEmojis[$category] ?? '📋';
+                                        $badgeColor = $categoryColors[$category] ?? 'secondary';
+                                    @endphp
+                                    <span class="badge bg-{{ $badgeColor }}">
+                                        {{ $emoji }} {{ ucfirst($category) }}
                                     </span>
-                                    <small class="text-muted">{{ $achievement->pivot->unlocked_at->format('M j, Y') }}</small>
                                 </div>
-                                @else
-                                <span class="badge bg-secondary" aria-label="Achievement locked">
-                                    <i class="fas fa-lock" aria-hidden="true"></i> Locked
-                                </span>
+                                
+                                <p class="small {{ isset($achievement->pivot) ? 'text-white' : 'text-white opacity-50' }} mb-2">
+                                    {{ $achievement->description ?? 'No description available.' }}
+                                </p>
+
+                                <!-- Progress Bar for Trackable Achievements -->
+                                @if(isset($achievement->is_progress_based) && $achievement->is_progress_based && !isset($achievement->pivot))
+                                <div class="progress mb-2" style="height: 20px;">
+                                    @php
+                                        $currentProgress = $achievement->current_progress ?? 0;
+                                        $targetValue = $achievement->target_value ?? 1;
+                                        $progressPercent = $targetValue > 0 ? ($currentProgress / $targetValue) * 100 : 0;
+                                    @endphp
+                                    <div class="progress-bar" style="width: {{ $progressPercent }}%">
+                                        {{ $currentProgress }} / {{ $targetValue }}
+                                    </div>
+                                </div>
+                                @endif
+
+                                <!-- Achievement Status -->
+                                <div class="achievement-status">
+                                    @if(isset($achievement->pivot))
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-success">✅ Unlocked</span>
+                                        <small class="text-white opacity-50">{{ $achievement->pivot->unlocked_at->format('M j, Y') }}</small>
+                                    </div>
+                                    @else
+                                    <span class="badge bg-secondary">🔒 Locked</span>
+                                    @endif
+                                </div>
+
+                                <!-- Rewards -->
+                                @if(isset($achievement->rewards) && $achievement->rewards)
+                                <div class="achievement-rewards mt-2">
+                                    <small class="{{ isset($achievement->pivot) ? 'text-success' : 'text-white opacity-75' }}">
+                                        🎁 Reward: {{ $achievement->rewards }}
+                                    </small>
+                                </div>
+                                @endif
+
+                                <!-- Hints for Locked Achievements -->
+                                @if(!isset($achievement->pivot) && isset($achievement->hints) && $achievement->hints)
+                                <div class="achievement-hints mt-2">
+                                    <small class="text-info">
+                                        💡 Hint: {{ $achievement->hints }}
+                                    </small>
+                                </div>
                                 @endif
                             </div>
-
-                            <!-- Rewards -->
-                            @if($achievement->rewards)
-                            <div class="achievement-rewards mt-2">
-                                <small class="{{ $achievement->pivot ? 'text-success' : 'text-muted' }}">
-                                    <i class="fas fa-gift" aria-hidden="true"></i> 
-                                    Reward: {{ $achievement->rewards }}
-                                </small>
-                            </div>
-                            @endif
-
-                            <!-- Hints for Locked Achievements -->
-                            @if(!$achievement->pivot && $achievement->hints)
-                            <div class="achievement-hints mt-2">
-                                <small class="text-info">
-                                    <i class="fas fa-lightbulb" aria-hidden="true"></i> 
-                                    Hint: {{ $achievement->hints }}
-                                </small>
-                            </div>
-                            @endif
                         </div>
                     </div>
                 </div>
+                @endforeach
+                @else
+                <div class="col-12">
+                    <div class="achievement-card p-4 text-center">
+                        <div style="font-size: 3rem; opacity: 0.5;">🏆</div>
+                        <h5 class="text-white opacity-75 mt-3">No Achievements Yet</h5>
+                        <p class="text-white opacity-50">Complete challenges to unlock achievements!</p>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
-        @endforeach
     </div>
 
-    <!-- Achievement Statistics -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="h5 mb-0">Achievement Statistics</h2>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-3 mb-3">
-                            <div class="stat-card">
-                                <div class="h4 text-warning" aria-label="Total achievements unlocked {{ $unlockedCount }}">{{ $unlockedCount }}</div>
-                                <div class="text-muted">Unlocked</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="stat-card">
-                                <div class="h4 text-muted" aria-label="Total achievements remaining {{ $totalCount - $unlockedCount }}">{{ $totalCount - $unlockedCount }}</div>
-                                <div class="text-muted">Remaining</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="stat-card">
-                                <div class="h4 text-info" aria-label="Completion percentage {{ $totalCount > 0 ? round(($unlockedCount / $totalCount) * 100) : 0 }}%">{{ $totalCount > 0 ? round(($unlockedCount / $totalCount) * 100) : 0 }}%</div>
-                                <div class="text-muted">Completion</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="stat-card">
-                                <div class="h4 text-success" aria-label="Total achievement points {{ $totalPoints }}">{{ $totalPoints }}</div>
-                                <div class="text-muted">Points</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{{ route('game.dashboard') }}" class="dashboard-btn">
+            🏠 Dashboard
+        </a>
+        <a href="{{ route('game.character') }}" class="dashboard-btn">
+            👤 Character
+        </a>
+        <a href="{{ route('game.inventory') }}" class="dashboard-btn">
+            🎒 Inventory
+        </a>
+        <a href="{{ route('game.crafting') }}" class="dashboard-btn">
+            🔨 Crafting
+        </a>
+        <a href="{{ route('game.adventures') }}" class="dashboard-btn">
+            🗺️ Adventures
+        </a>
+        <a href="{{ route('game.combat') }}" class="dashboard-btn">
+            ⚔️ Combat
+        </a>
+        <a href="{{ route('game.skills') }}" class="dashboard-btn">
+            📚 Skills
+        </a>
     </div>
 </div>
-
-<style>
-.achievement-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.achievement-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.achievement-card.unlocked {
-    border-left: 4px solid #ffc107;
-}
-
-.achievement-card.locked {
-    opacity: 0.7;
-}
-
-.achievement-card.recent {
-    border: 2px solid #28a745;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
-    }
-}
-
-.achievement-icon {
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.stat-card {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    background: rgba(0,0,0,0.02);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .achievement-card {
-        transition: none;
-    }
-    
-    .achievement-card.recent {
-        animation: none;
-    }
-}
-</style>
 
 <script>
 function filterAchievements(category) {
@@ -339,7 +512,10 @@ function filterAchievements(category) {
     document.querySelectorAll('[id^="filter-"]').forEach(btn => {
         btn.classList.remove('active');
     });
-    document.getElementById(`filter-${category}`).classList.add('active');
+    const button = document.getElementById(`filter-${category}`);
+    if (button) {
+        button.classList.add('active');
+    }
 
     // Filter achievements
     const achievements = document.querySelectorAll('.achievement-item');
@@ -365,9 +541,12 @@ function toggleUnlockedOnly() {
             achievement.style.display = 'none';
         } else if (achievement.style.display === 'none' && !showOnlyUnlocked) {
             // Only show if it passes current category filter
-            const activeCategory = document.querySelector('[id^="filter-"].active').id.replace('filter-', '');
-            if (activeCategory === 'all' || achievement.dataset.category === activeCategory) {
-                achievement.style.display = '';
+            const activeButton = document.querySelector('[id^="filter-"].active');
+            if (activeButton) {
+                const activeCategory = activeButton.id.replace('filter-', '');
+                if (activeCategory === 'all' || achievement.dataset.category === activeCategory) {
+                    achievement.style.display = '';
+                }
             }
         }
     });
@@ -386,7 +565,9 @@ function announceToScreenReader(message) {
     document.body.appendChild(announcement);
     
     setTimeout(() => {
-        document.body.removeChild(announcement);
+        if (document.body.contains(announcement)) {
+            document.body.removeChild(announcement);
+        }
     }, 1000);
 }
 

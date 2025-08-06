@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\SecurityHeadersMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // $middleware->web(SetLocale::class);
         $middleware->web(append: [
             SetLocale::class,
+            SecurityHeadersMiddleware::class,
+        ]);
+        
+        $middleware->alias([
+            'admin' => AdminMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

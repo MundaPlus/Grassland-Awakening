@@ -16,6 +16,7 @@
                         </div>
                         <div class="col-md-4 text-md-end">
                             <div class="skill-stats">
+                                <span class="badge bg-warning fs-6 me-2">{{ $player->skill_points }} Skill Points</span>
                                 <span class="badge bg-primary fs-6">{{ $skillStats['total_skills'] }} Skills Learned</span>
                                 <small class="d-block text-muted mt-1">Level {{ $skillStats['highest_level'] }} highest</small>
                             </div>
@@ -115,8 +116,22 @@
                                                 @endif
                                             @else
                                                 @if($skillInfo['can_learn'])
-                                                <div class="alert alert-info small mb-0">
-                                                    <i class="fas fa-info-circle"></i> Available to learn! Use related actions to gain experience.
+                                                <div class="mb-2">
+                                                    <div class="alert alert-info small mb-2">
+                                                        <i class="fas fa-info-circle"></i> Available to learn! Cost: {{ $skillInfo['skill']->base_cost }} skill points.
+                                                    </div>
+                                                    @if($player->skill_points >= $skillInfo['skill']->base_cost)
+                                                        <button class="btn btn-success btn-sm w-100 learn-skill-btn" 
+                                                                data-skill-id="{{ $skillInfo['skill']->id }}"
+                                                                data-skill-name="{{ $skillInfo['skill']->name }}"
+                                                                data-skill-cost="{{ $skillInfo['skill']->base_cost }}">
+                                                            <i class="fas fa-plus"></i> Learn ({{ $skillInfo['skill']->base_cost }} SP)
+                                                        </button>
+                                                    @else
+                                                        <button class="btn btn-secondary btn-sm w-100" disabled>
+                                                            <i class="fas fa-ban"></i> Need {{ $skillInfo['skill']->base_cost }} SP
+                                                        </button>
+                                                    @endif
                                                 </div>
                                                 @else
                                                 <div class="small text-muted">
@@ -216,8 +231,22 @@
                                                 @endif
                                             @else
                                                 @if($skillInfo['can_learn'])
-                                                <div class="alert alert-warning small mb-0">
-                                                    <i class="fas fa-exclamation-triangle"></i> Available to learn! Meet the requirements to unlock.
+                                                <div class="mb-2">
+                                                    <div class="alert alert-warning small mb-2">
+                                                        <i class="fas fa-exclamation-triangle"></i> Available to learn! Cost: {{ $skillInfo['skill']->base_cost }} skill points.
+                                                    </div>
+                                                    @if($player->skill_points >= $skillInfo['skill']->base_cost)
+                                                        <button class="btn btn-success btn-sm w-100 learn-skill-btn" 
+                                                                data-skill-id="{{ $skillInfo['skill']->id }}"
+                                                                data-skill-name="{{ $skillInfo['skill']->name }}"
+                                                                data-skill-cost="{{ $skillInfo['skill']->base_cost }}">
+                                                            <i class="fas fa-plus"></i> Learn ({{ $skillInfo['skill']->base_cost }} SP)
+                                                        </button>
+                                                    @else
+                                                        <button class="btn btn-secondary btn-sm w-100" disabled>
+                                                            <i class="fas fa-ban"></i> Need {{ $skillInfo['skill']->base_cost }} SP
+                                                        </button>
+                                                    @endif
                                                 </div>
                                                 @else
                                                 <div class="small text-muted">
@@ -371,6 +400,52 @@ function filterSkills(filter) {
         activeSection.style.display = '';
     }
 }
+
+// Learn skill functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const learnButtons = document.querySelectorAll('.learn-skill-btn');
+    
+    learnButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const skillId = this.getAttribute('data-skill-id');
+            const skillName = this.getAttribute('data-skill-name');
+            const skillCost = this.getAttribute('data-skill-cost');
+            
+            if (confirm(`Learn ${skillName} for ${skillCost} skill points?`)) {
+                // Disable button and show loading
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Learning...';
+                
+                fetch(`/game/skills/learn/${skillId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        GameUI.showToast(data.message, 'success');
+                        setTimeout(() => {
+                            window.location.reload(); // Refresh to show updated state
+                        }, 1000);
+                    } else {
+                        GameUI.showToast(data.message, 'error');
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-plus"></i> Learn (' + skillCost + ' SP)';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    GameUI.showToast('An error occurred while learning the skill.', 'error');
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-plus"></i> Learn (' + skillCost + ' SP)';
+                });
+            }
+        });
+    });
+});
 
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
