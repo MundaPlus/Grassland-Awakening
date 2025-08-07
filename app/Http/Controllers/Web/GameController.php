@@ -710,12 +710,17 @@ class GameController extends Controller
     {
         $player = $this->getOrCreatePlayer();
         $slot = $request->input('slot');
+        \Log::info("Player: {$player->id}, Slot: " . ($slot ?: 'auto-detect'));
 
         // Try to find the item in both inventory systems
         $inventoryItem = $player->inventory()->with('item')->find($id);
         $playerItem = $player->playerItems()->with('item')->find($id);
+        
+        \Log::info("Found inventory item: " . ($inventoryItem ? $inventoryItem->item->name : 'none'));
+        \Log::info("Found player item: " . ($playerItem ? $playerItem->item->name : 'none'));
 
         if (!$inventoryItem && !$playerItem) {
+            \Log::error("Item {$id} not found in either inventory system");
             return redirect()->route('game.character')
                 ->with('error', 'Item not found in inventory.');
         }
@@ -749,7 +754,7 @@ class GameController extends Controller
 
         if ($success) {
             return redirect()->route('game.character')
-                ->with('success', 'Item equipped successfully!');
+                ->with('success', "Successfully equipped {$item->name} to {$slot} slot!");
         } else {
             // Add more specific error information for debugging
             $errorMsg = 'Unable to equip item. ';
@@ -792,6 +797,9 @@ class GameController extends Controller
         $playerItem->is_equipped = true;
         $playerItem->equipment_slot = $slot;
         $playerItem->save();
+
+        // Debug log
+        \Log::info("Equipped item: {$playerItem->item->name} to slot: {$slot}, is_equipped: {$playerItem->is_equipped}");
 
         return true;
     }
@@ -2230,15 +2238,22 @@ class GameController extends Controller
         $playerItem = $player->playerItems()->with('item')->findOrFail($id);
 
         if (!$playerItem->canEquip()) {
-            return response()->json(['error' => 'Cannot equip this item'], 400);
+            return redirect()->route('game.character')
+                ->with('error', 'Cannot equip this item - requirements not met');
         }
 
         $item = $playerItem->item;
 
-        // Determine the equipment slot
-        $slot = $playerItem->getEquipmentSlot();
+        // Determine the equipment slot from the item
+        $slot = $item->getEquipmentSlot();
         if (!$slot) {
-            return response()->json(['error' => 'Item cannot be equipped in any slot'], 400);
+            // Use our slot determination logic for special items
+            $slot = $this->determineEquipmentSlot($item, $player);
+        }
+        
+        if (!$slot) {
+            return redirect()->route('game.character')
+                ->with('error', 'Item cannot be equipped in any slot. Item: ' . $item->name . ', Type: ' . $item->type . ', Subtype: ' . ($item->subtype ?? 'none'));
         }
 
         // Handle special slots that might conflict
@@ -2275,12 +2290,8 @@ class GameController extends Controller
             'equipment_slot' => $slot
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Equipped {$item->name} successfully!",
-            'item' => $item,
-            'slot' => $slot
-        ]);
+        return redirect()->route('game.character')
+            ->with('success', "Successfully equipped {$item->name} to {$slot} slot!");
     }
 
     /**

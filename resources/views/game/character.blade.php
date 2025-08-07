@@ -1162,10 +1162,14 @@ function changeGender(newGender) {
 }
 
 function equipFromCharacterPage(itemId) {
+    console.log('Attempting to equip item:', itemId);
+    
     // Create form to equip item
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '/game/inventory/equip/' + itemId;
+    form.action = '/game/player-item/equip/' + itemId;
+    
+    console.log('Form action:', form.action);
     
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
     if (csrfToken) {
@@ -1174,9 +1178,13 @@ function equipFromCharacterPage(itemId) {
         csrfInput.name = '_token';
         csrfInput.value = csrfToken.getAttribute('content');
         form.appendChild(csrfInput);
+        console.log('CSRF token added');
+    } else {
+        console.error('CSRF token not found');
     }
     
     document.body.appendChild(form);
+    console.log('Submitting form...');
     form.submit();
 }
 
