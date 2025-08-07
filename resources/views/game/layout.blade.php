@@ -330,6 +330,7 @@
     <a href="#main-content" class="skip-link">Skip to main content</a>
     
     <!-- Navigation -->
+    @unless(request()->routeIs('game.adventure-map'))
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary" role="navigation" aria-label="Main navigation">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="{{ route('game.dashboard') }}" aria-label="Grassland Awakening Home">
@@ -438,9 +439,11 @@
             </div>
         </div>
     </nav>
+    @endunless
     
     <!-- Main content -->
     <main id="main-content" role="main" tabindex="-1">
+        @unless(request()->routeIs('game.adventure-map'))
         <div class="container-fluid py-4">
             <!-- Flash messages -->
             @if(session('success'))
@@ -463,13 +466,39 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
                 </div>
             @endif
+        @else
+            <!-- Flash messages for adventure map (positioned absolutely) -->
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; max-width: 400px;" role="alert" aria-live="polite">
+                    <span aria-label="Success">✅</span> {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+                </div>
+            @endif
+            
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; max-width: 400px;" role="alert" aria-live="polite">
+                    <span aria-label="Error">❌</span> {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+                </div>
+            @endif
+            
+            @if(session('warning'))
+                <div class="alert alert-warning alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; max-width: 400px;" role="alert" aria-live="polite">
+                    <span aria-label="Warning">⚠️</span> {{ session('warning') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+                </div>
+            @endif
+        @endunless
             
             <!-- Page content -->
             @yield('content')
+        @unless(request()->routeIs('game.adventure-map'))
         </div>
+        @endunless
     </main>
     
     <!-- Footer -->
+    @unless(request()->routeIs('game.adventure-map'))
     <footer class="bg-dark text-light py-4 mt-5" role="contentinfo">
         <div class="container">
             <div class="row">
@@ -484,6 +513,7 @@
             </div>
         </div>
     </footer>
+    @endunless
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

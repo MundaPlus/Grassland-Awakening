@@ -667,6 +667,9 @@
             <div class="fw-bold small">Quick Actions</div>
         </div>
         <div class="d-flex gap-2 flex-wrap justify-content-center">
+            <a href="{{ route('game.dashboard') }}" class="dashboard-btn success">
+                🏠 Dashboard
+            </a>
             <a href="{{ route('game.character') }}" class="dashboard-btn primary">
                 👤 Character
             </a>

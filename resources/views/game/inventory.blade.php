@@ -204,6 +204,7 @@
         top: 100px;
         right: 20px;
         width: 280px;
+        max-height: 300px;
         background: rgba(23, 162, 184, 0.9);
         backdrop-filter: blur(15px);
         border: 2px solid rgba(255, 255, 255, 0.3);
@@ -211,6 +212,7 @@
         padding: 15px;
         color: white;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        overflow-y: auto;
     }
 
     .stat-item {
@@ -317,10 +319,10 @@
     /* Recently Added Panel - Center Right */
     .recent-items-panel {
         position: absolute;
-        top: 320px;
+        top: 420px;
         right: 20px;
         width: 280px;
-        height: 200px;
+        height: 180px;
         background: rgba(255, 193, 7, 0.9);
         backdrop-filter: blur(15px);
         border: 2px solid rgba(255, 255, 255, 0.3);
@@ -500,8 +502,7 @@
                                     <div class="item-header">
                                         <span class="item-icon">⚔️</span>
                                         <span class="item-name rarity-{{ $item->item->rarity }}">
-                                            {{ $item->getDisplayName() }}
-                                            @if($item->hasAffixes()) ✨ @endif
+                                            {{ $item->item->name }}
                                             @if($item->is_equipped) 🟢 @endif
                                         </span>
                                         @if($item->quantity > 1)
@@ -542,8 +543,7 @@
                                     <div class="item-header">
                                         <span class="item-icon">🛡️</span>
                                         <span class="item-name rarity-{{ $item->item->rarity }}">
-                                            {{ $item->getDisplayName() }}
-                                            @if($item->hasAffixes()) ✨ @endif
+                                            {{ $item->item->name }}
                                             @if($item->is_equipped) 🟢 @endif
                                         </span>
                                         @if($item->quantity > 1)
@@ -584,8 +584,7 @@
                                     <div class="item-header">
                                         <span class="item-icon">💍</span>
                                         <span class="item-name rarity-{{ $item->item->rarity }}">
-                                            {{ $item->getDisplayName() }}
-                                            @if($item->hasAffixes()) ✨ @endif
+                                            {{ $item->item->name }}
                                             @if($item->is_equipped) 🟢 @endif
                                         </span>
                                         @if($item->quantity > 1)
@@ -622,7 +621,7 @@
                                     <div class="item-header">
                                         <span class="item-icon">🧪</span>
                                         <span class="item-name rarity-{{ $item->item->rarity }}">
-                                            {{ $item->getDisplayName() }}
+                                            {{ $item->item->name }}
                                         </span>
                                         @if($item->quantity > 1)
                                             <span class="item-quantity">x{{ $item->quantity }}</span>
@@ -656,7 +655,7 @@
                                     <div class="item-header">
                                         <span class="item-icon">⚒️</span>
                                         <span class="item-name rarity-{{ $item->item->rarity }}">
-                                            {{ $item->getDisplayName() }}
+                                            {{ $item->item->name }}
                                         </span>
                                         @if($item->quantity > 1)
                                             <span class="item-quantity">x{{ $item->quantity }}</span>
@@ -691,7 +690,7 @@
                                     <div class="item-header">
                                         <span class="item-icon">📦</span>
                                         <span class="item-name rarity-{{ $item->item->rarity }}">
-                                            {{ $item->getDisplayName() }}
+                                            {{ $item->item->name }}
                                         </span>
                                         @if($item->quantity > 1)
                                             <span class="item-quantity">x{{ $item->quantity }}</span>
@@ -765,8 +764,7 @@
                     </span>
                     <div class="recent-item-info">
                         <div class="recent-item-name">
-                            {{ Str::limit($recentItem->getDisplayName(), 20) }}
-                            @if($recentItem->hasAffixes()) ✨ @endif
+                            {{ Str::limit($recentItem->item->name, 20) }}
                         </div>
                         <div class="recent-item-time">{{ $recentItem->created_at->diffForHumans() }}</div>
                     </div>
@@ -811,6 +809,9 @@
             <div class="fw-bold small">Quick Actions</div>
         </div>
         <div class="d-flex gap-2 flex-wrap justify-content-center">
+            <a href="{{ route('game.dashboard') }}" class="dashboard-btn success">
+                🏠 Dashboard
+            </a>
             <a href="{{ route('game.adventures') }}" class="dashboard-btn danger">
                 🗺️ Adventure
             </a>
