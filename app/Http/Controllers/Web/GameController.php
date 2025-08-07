@@ -104,7 +104,7 @@ class GameController extends Controller
         try {
             $request->validate([
                 'seed' => 'nullable|string',
-                'difficulty' => 'nullable|in:,easy,normal,hard,nightmare',
+                'difficulty' => 'nullable|in:,easy,medium,hard,expert',
                 'road_type' => 'nullable|string'
             ]);
 
@@ -113,6 +113,12 @@ class GameController extends Controller
             // Check if player has enough currency
             $cost = 10;
             if ($player->persistent_currency < $cost) {
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Not enough gold to generate adventure. Cost: ' . $cost . ' gold.'
+                    ]);
+                }
                 return back()->with('error', 'Not enough gold to generate adventure. Cost: ' . $cost . ' gold.');
             }
 
@@ -130,7 +136,7 @@ class GameController extends Controller
                     if ($player->level >= 10) {
                         $difficulty = 'hard';
                     } elseif ($player->level >= 5) {
-                        $difficulty = 'normal';
+                        $difficulty = 'medium';
                     } else {
                         $difficulty = 'easy';
                     }
@@ -168,6 +174,12 @@ class GameController extends Controller
                     throw new \Exception('Failed to create adventure record');
                 }
 
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Adventure generated successfully! Cost: ' . $cost . ' gold.'
+                    ]);
+                }
                 return redirect()->route('game.adventures')
                     ->with('success', 'Adventure generated successfully! Cost: ' . $cost . ' gold.');
             });
@@ -179,6 +191,12 @@ class GameController extends Controller
                 'stack_trace' => $e->getTraceAsString()
             ]);
 
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to generate adventure. Please try again.'
+                ]);
+            }
             return redirect()->route('game.adventures')
                 ->with('error', 'Failed to generate adventure. Please try again.');
         }

@@ -467,9 +467,9 @@
                         <label class="text-white small mb-1">⚔️ Difficulty:</label>
                         <select name="difficulty" class="form-select form-select-sm bg-dark text-white border-secondary">
                             <option value="easy">🟢 Easy</option>
-                            <option value="normal" selected>🟡 Normal</option>
+                            <option value="medium" selected>🟡 Medium</option>
                             <option value="hard">🟠 Hard</option>
-                            <option value="nightmare">🔴 Nightmare</option>
+                            <option value="expert">🔴 Expert</option>
                         </select>
                     </div>
                 </div>
@@ -497,7 +497,7 @@
                         @php
                             $difficultyClass = match($adventure->difficulty ?? 'normal') {
                                 'easy' => 'difficulty-easy',
-                                'normal' => 'difficulty-medium', 
+                                'normal' => 'difficulty-medium',
                                 'hard' => 'difficulty-hard',
                                 'nightmare' => 'difficulty-extreme',
                                 default => 'difficulty-medium'
@@ -505,7 +505,7 @@
                             $difficultyIcon = match($adventure->difficulty ?? 'normal') {
                                 'easy' => 'E',
                                 'normal' => 'N',
-                                'hard' => 'H', 
+                                'hard' => 'H',
                                 'nightmare' => 'X',
                                 default => 'N'
                             };
@@ -640,7 +640,7 @@
             🚀 Start Adventure
         </button>
 
-        <button class="adventure-btn warning" onclick="continueActiveAdventure()" id="continue-adventure-btn" 
+        <button class="adventure-btn warning" onclick="continueActiveAdventure()" id="continue-adventure-btn"
                 {{ $activeAdventures->isEmpty() ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' }}>
             ⏩ Continue Adventure
         </button>
@@ -716,19 +716,19 @@ let selectedAdventureId = null;
 // Adventure Generator Form Submission
 document.getElementById('adventure-generator-form').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const btn = document.getElementById('generate-adventure-btn');
     const spinner = btn.querySelector('.spinner-border');
     const originalText = btn.innerHTML;
-    
+
     // Show loading state
     btn.disabled = true;
     spinner.classList.remove('d-none');
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Generating...';
-    
+
     // Submit form data
     const formData = new FormData(this);
-    
+
     fetch('{{ route('game.generate-adventure') }}', {
         method: 'POST',
         body: formData,
@@ -767,7 +767,7 @@ function selectAdventure(adventureId) {
 
     // Highlight selected adventure
     event.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
-    
+
     // Enable start button
     const startBtn = document.getElementById('start-adventure-btn');
     startBtn.disabled = false;
@@ -783,7 +783,7 @@ function startSelectedAdventure() {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/game/adventures/' + selectedAdventureId + '/start';
-        
+
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
         if (csrfToken) {
             const csrfInput = document.createElement('input');
@@ -792,7 +792,7 @@ function startSelectedAdventure() {
             csrfInput.value = csrfToken.getAttribute('content');
             form.appendChild(csrfInput);
         }
-        
+
         document.body.appendChild(form);
         form.submit();
     } else {
@@ -801,15 +801,15 @@ function startSelectedAdventure() {
 }
 
 function continueAdventure(adventureId) {
-    window.location.href = '/game/adventure/' + adventureId;
+    window.location.href = '/game/adventure/' + adventureId + '/map';
 }
 
 function continueActiveAdventure() {
     @if($activeAdventures->isNotEmpty())
         @php
             $firstActiveAdventure = $activeAdventures->first();
-            $hasNodeMap = isset($firstActiveAdventure->generated_map) && 
-                         isset($firstActiveAdventure->generated_map['map']) && 
+            $hasNodeMap = isset($firstActiveAdventure->generated_map) &&
+                         isset($firstActiveAdventure->generated_map['map']) &&
                          isset($firstActiveAdventure->generated_map['map']['nodes']);
         @endphp
         @if($hasNodeMap)
@@ -829,7 +829,7 @@ function abandonSelectedAdventure() {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '/game/adventures/{{ $activeAdventures->first()->id }}/abandon';
-            
+
             const csrfToken = document.querySelector('meta[name="csrf-token"]');
             if (csrfToken) {
                 const csrfInput = document.createElement('input');
@@ -838,7 +838,7 @@ function abandonSelectedAdventure() {
                 csrfInput.value = csrfToken.getAttribute('content');
                 form.appendChild(csrfInput);
             }
-            
+
             document.body.appendChild(form);
             form.submit();
         }

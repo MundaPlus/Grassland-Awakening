@@ -736,13 +736,28 @@
                                 {{ $playerItem->item->name }}
                             </div>
                             <div class="equipment-item-slot">{{ ucfirst(str_replace('_', ' ', $playerItem->item->type)) }}</div>
-                            @if($playerItem->item->damage_bonus || $playerItem->item->ac_bonus)
+                            @php
+                                $hasStats = $playerItem->item->damage_bonus || $playerItem->item->ac_bonus || 
+                                           ($playerItem->item->stats_modifiers && count(array_filter($playerItem->item->stats_modifiers)));
+                            @endphp
+                            @if($hasStats)
                             <div class="equipment-item-stats">
                                 @if($playerItem->item->damage_bonus)
                                     ⚔️ +{{ $playerItem->item->damage_bonus }} DMG
                                 @endif
                                 @if($playerItem->item->ac_bonus)
                                     🛡️ +{{ $playerItem->item->ac_bonus }} AC
+                                @endif
+                                @if($playerItem->item->stats_modifiers)
+                                    @foreach($playerItem->item->stats_modifiers as $stat => $value)
+                                        @if($value > 0)
+                                            @php
+                                                $statIcons = ['str' => '💪', 'dex' => '🏃', 'con' => '❤️', 'int' => '🧠', 'wis' => '🦉', 'cha' => '💬'];
+                                                $displayValue = is_float($value) ? number_format($value, 1) : $value;
+                                            @endphp
+                                            {{ $statIcons[$stat] ?? '📊' }} +{{ $displayValue }} {{ strtoupper($stat) }}
+                                        @endif
+                                    @endforeach
                                 @endif
                             </div>
                             @endif
@@ -822,13 +837,28 @@
                                 {{ $playerItem->item->name }}
                             </div>
                             <div class="equipment-item-slot">{{ ucfirst(str_replace('_', ' ', $playerItem->item->subtype ?? $playerItem->item->type)) }}</div>
-                            @if($playerItem->item->damage_bonus || $playerItem->item->ac_bonus)
+                            @php
+                                $hasStats = $playerItem->item->damage_bonus || $playerItem->item->ac_bonus || 
+                                           ($playerItem->item->stats_modifiers && count(array_filter($playerItem->item->stats_modifiers)));
+                            @endphp
+                            @if($hasStats)
                             <div class="equipment-item-stats">
                                 @if($playerItem->item->damage_bonus)
                                     ⚔️ +{{ $playerItem->item->damage_bonus }} DMG
                                 @endif
                                 @if($playerItem->item->ac_bonus)
                                     🛡️ +{{ $playerItem->item->ac_bonus }} AC
+                                @endif
+                                @if($playerItem->item->stats_modifiers)
+                                    @foreach($playerItem->item->stats_modifiers as $stat => $value)
+                                        @if($value > 0)
+                                            @php
+                                                $statIcons = ['str' => '💪', 'dex' => '🏃', 'con' => '❤️', 'int' => '🧠', 'wis' => '🦉', 'cha' => '💬'];
+                                                $displayValue = is_float($value) ? number_format($value, 1) : $value;
+                                            @endphp
+                                            {{ $statIcons[$stat] ?? '📊' }} +{{ $displayValue }} {{ strtoupper($stat) }}
+                                        @endif
+                                    @endforeach
                                 @endif
                             </div>
                             @endif
