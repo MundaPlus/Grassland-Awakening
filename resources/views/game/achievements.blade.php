@@ -497,8 +497,8 @@
         <a href="{{ route('game.adventures') }}" class="dashboard-btn">
             🗺️ Adventures
         </a>
-        <a href="{{ route('game.combat') }}" class="dashboard-btn">
-            ⚔️ Combat
+        <a href="{{ route('game.inventory') }}" class="dashboard-btn">
+            🎒 Inventory
         </a>
         <a href="{{ route('game.skills') }}" class="dashboard-btn">
             📚 Skills
