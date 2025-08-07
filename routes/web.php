@@ -176,6 +176,7 @@ Route::group(['namespace' => 'App\Http\Controllers\Web', 'prefix' => 'game', 'as
     Route::get('/adventure/{id}/combat', 'GameController@combat')->name('combat');
     Route::post('/adventure/{id}/combat', 'GameController@processCombatAction')->name('combat-action');
     Route::get('/achievements', 'GameController@achievements')->name('achievements');
+    Route::get('/crafting', 'GameController@crafting')->name('crafting');
     Route::get('/skills', 'GameController@skills')->name('skills');
     Route::post('/skills/learn/{id}', 'GameController@learnSkill')->name('learn-skill');
     Route::get('/reputation', 'GameController@reputation')->name('reputation');

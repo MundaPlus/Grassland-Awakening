@@ -446,132 +446,155 @@
             <h2 class="h6 mb-2">⚔️ Available Adventures</h2>
         </div>
 
+        <!-- Adventure Generator Section -->
+        <div class="mb-4 pb-3" style="border-bottom: 2px solid rgba(255,255,255,0.3);">
+            <h3 class="h6 mb-3 text-warning">⚡ Generate New Adventure</h3>
+            <form id="adventure-generator-form" method="POST" action="{{ route('game.generate-adventure') }}">
+                @csrf
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-white small mb-1">🛤️ Road Type:</label>
+                        <select name="road_type" class="form-select form-select-sm bg-dark text-white border-secondary">
+                            <option value="forest_path">🌲 Forest Path</option>
+                            <option value="mountain_trail">⛰️ Mountain Trail</option>
+                            <option value="coastal_road">🌊 Coastal Road</option>
+                            <option value="desert_route">🏜️ Desert Route</option>
+                            <option value="river_crossing">🏞️ River Crossing</option>
+                            <option value="ancient_highway">🏛️ Ancient Highway</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-white small mb-1">⚔️ Difficulty:</label>
+                        <select name="difficulty" class="form-select form-select-sm bg-dark text-white border-secondary">
+                            <option value="easy">🟢 Easy</option>
+                            <option value="normal" selected>🟡 Normal</option>
+                            <option value="hard">🟠 Hard</option>
+                            <option value="nightmare">🔴 Nightmare</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-warning btn-sm w-100" id="generate-adventure-btn">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    🎲 Generate Adventure
+                </button>
+            </form>
+        </div>
+
         <!-- Adventure Tabs -->
         <div class="adventure-tabs">
-            <button class="adventure-tab active" data-category="dungeons">🏰 Dungeons</button>
-            <button class="adventure-tab" data-category="exploration">🌲 Exploration</button>
-            <button class="adventure-tab" data-category="quests">📜 Quests</button>
+            <button class="adventure-tab active" data-category="available">📋 Available</button>
+            <button class="adventure-tab" data-category="active">⚡ Active</button>
+            <button class="adventure-tab" data-category="completed">✅ Completed</button>
         </div>
 
         <!-- Adventures Content -->
         <div class="adventures-content">
-            <!-- Dungeons -->
-            <div class="adventure-category" data-category="dungeons">
-                <div class="adventure-item" onclick="selectAdventure('goblin-cave')">
-                    <div class="adventure-difficulty difficulty-easy">E</div>
-                    <div class="adventure-header">
-                        <div class="adventure-title">🏴‍☠️ Goblin Cave</div>
-                        <div class="adventure-level">Level 1-3</div>
+            <!-- Available Adventures -->
+            <div class="adventure-category" data-category="available">
+                @if($availableAdventures->isNotEmpty())
+                    @foreach($availableAdventures as $adventure)
+                    <div class="adventure-item" onclick="selectAdventure('{{ $adventure->id }}')">
+                        @php
+                            $difficultyClass = match($adventure->difficulty ?? 'normal') {
+                                'easy' => 'difficulty-easy',
+                                'normal' => 'difficulty-medium', 
+                                'hard' => 'difficulty-hard',
+                                'nightmare' => 'difficulty-extreme',
+                                default => 'difficulty-medium'
+                            };
+                            $difficultyIcon = match($adventure->difficulty ?? 'normal') {
+                                'easy' => 'E',
+                                'normal' => 'N',
+                                'hard' => 'H', 
+                                'nightmare' => 'X',
+                                default => 'N'
+                            };
+                        @endphp
+                        <div class="adventure-difficulty {{ $difficultyClass }}">{{ $difficultyIcon }}</div>
+                        <div class="adventure-header">
+                            <div class="adventure-title">{{ $adventure->title }}</div>
+                            <div class="adventure-level">{{ ucfirst($adventure->difficulty ?? 'normal') }}</div>
+                        </div>
+                        <div class="adventure-description">
+                            {{ $adventure->description }}
+                        </div>
+                        <div class="adventure-rewards">
+                            <div class="reward-item">🗓️ {{ $adventure->created_at->diffForHumans() }}</div>
+                            @if(isset($adventure->generated_map['metadata']['estimated_duration']))
+                            <div class="reward-item">⏱️ {{ $adventure->generated_map['metadata']['estimated_duration'] }}min</div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="adventure-description">
-                        A small cave system inhabited by goblins. Perfect for new adventurers to test their skills.
+                    @endforeach
+                @else
+                    <div class="text-center py-4">
+                        <div class="mb-3" style="font-size: 3rem; opacity: 0.5;">🗺️</div>
+                        <h5 class="text-white-50">No Available Adventures</h5>
+                        <p class="text-white-50 small">Generate a new adventure above to begin your journey!</p>
                     </div>
-                    <div class="adventure-rewards">
-                        <div class="reward-item">💰 50-100 Gold</div>
-                        <div class="reward-item">🎒 Basic Loot</div>
-                        <div class="reward-item">⭐ 25 XP</div>
-                    </div>
-                </div>
-
-                <div class="adventure-item" onclick="selectAdventure('dark-forest')">
-                    <div class="adventure-difficulty difficulty-medium">M</div>
-                    <div class="adventure-header">
-                        <div class="adventure-title">🌑 Dark Forest Depths</div>
-                        <div class="adventure-level">Level 3-5</div>
-                    </div>
-                    <div class="adventure-description">
-                        Ancient trees hide dangerous creatures and forgotten treasures in this mysterious woodland.
-                    </div>
-                    <div class="adventure-rewards">
-                        <div class="reward-item">💰 100-200 Gold</div>
-                        <div class="reward-item">🎒 Rare Items</div>
-                        <div class="reward-item">⭐ 50 XP</div>
-                    </div>
-                </div>
-
-                <div class="adventure-item" onclick="selectAdventure('dragon-lair')">
-                    <div class="adventure-difficulty difficulty-extreme">X</div>
-                    <div class="adventure-header">
-                        <div class="adventure-title">🐉 Ancient Dragon's Lair</div>
-                        <div class="adventure-level">Level 8+</div>
-                    </div>
-                    <div class="adventure-description">
-                        Face the legendary dragon that has terrorized the lands for centuries. Only the bravest dare enter.
-                    </div>
-                    <div class="adventure-rewards">
-                        <div class="reward-item">💰 1000+ Gold</div>
-                        <div class="reward-item">🎒 Legendary Items</div>
-                        <div class="reward-item">⭐ 500 XP</div>
-                    </div>
-                </div>
+                @endif
             </div>
 
-            <!-- Exploration -->
-            <div class="adventure-category" data-category="exploration" style="display: none;">
-                <div class="adventure-item" onclick="selectAdventure('meadow-exploration')">
-                    <div class="adventure-difficulty difficulty-easy">E</div>
-                    <div class="adventure-header">
-                        <div class="adventure-title">🌸 Peaceful Meadows</div>
-                        <div class="adventure-level">Level 1+</div>
+            <!-- Active Adventures -->
+            <div class="adventure-category" data-category="active" style="display: none;">
+                @if($activeAdventures->isNotEmpty())
+                    @foreach($activeAdventures as $adventure)
+                    <div class="adventure-item" onclick="continueAdventure('{{ $adventure->id }}')">
+                        <div class="adventure-difficulty difficulty-medium">A</div>
+                        <div class="adventure-header">
+                            <div class="adventure-title">{{ $adventure->title }}</div>
+                            <div class="adventure-level">In Progress</div>
+                        </div>
+                        <div class="adventure-description">
+                            {{ $adventure->description }}
+                        </div>
+                        <div class="adventure-rewards">
+                            <div class="reward-item">📍 Node {{ $adventure->current_node_id }}</div>
+                            <div class="reward-item">📊 {{ number_format($adventure->getCurrentProgress() * 100) }}%</div>
+                        </div>
                     </div>
-                    <div class="adventure-description">
-                        Explore the beautiful grasslands surrounding your village. Gather herbs and enjoy nature.
+                    @endforeach
+                @else
+                    <div class="text-center py-4">
+                        <div class="mb-3" style="font-size: 3rem; opacity: 0.5;">⚡</div>
+                        <h5 class="text-white-50">No Active Adventures</h5>
+                        <p class="text-white-50 small">Start an adventure to see it here!</p>
                     </div>
-                    <div class="adventure-rewards">
-                        <div class="reward-item">🌿 Herbs</div>
-                        <div class="reward-item">⭐ 10 XP</div>
-                    </div>
-                </div>
-
-                <div class="adventure-item" onclick="selectAdventure('mountain-path')">
-                    <div class="adventure-difficulty difficulty-medium">M</div>
-                    <div class="adventure-header">
-                        <div class="adventure-title">⛰️ Mountain Path</div>
-                        <div class="adventure-level">Level 4+</div>
-                    </div>
-                    <div class="adventure-description">
-                        Trek through treacherous mountain paths to discover hidden valleys and ancient ruins.
-                    </div>
-                    <div class="adventure-rewards">
-                        <div class="reward-item">🏺 Artifacts</div>
-                        <div class="reward-item">💎 Gems</div>
-                        <div class="reward-item">⭐ 75 XP</div>
-                    </div>
-                </div>
+                @endif
             </div>
 
-            <!-- Quests -->
-            <div class="adventure-category" data-category="quests" style="display: none;">
-                <div class="adventure-item" onclick="selectAdventure('merchant-delivery')">
-                    <div class="adventure-difficulty difficulty-easy">E</div>
-                    <div class="adventure-header">
-                        <div class="adventure-title">📦 Merchant's Delivery</div>
-                        <div class="adventure-level">Level 1+</div>
+            <!-- Completed Adventures -->
+            <div class="adventure-category" data-category="completed" style="display: none;">
+                @if(isset($completedAdventures) && $completedAdventures->isNotEmpty())
+                    @foreach($completedAdventures as $adventure)
+                    <div class="adventure-item" style="opacity: 0.8;">
+                        <div class="adventure-difficulty {{ $adventure->status === 'completed' ? 'difficulty-easy' : 'difficulty-hard' }}">
+                            {{ $adventure->status === 'completed' ? '✓' : '✗' }}
+                        </div>
+                        <div class="adventure-header">
+                            <div class="adventure-title">{{ $adventure->title }}</div>
+                            <div class="adventure-level">{{ ucfirst($adventure->status) }}</div>
+                        </div>
+                        <div class="adventure-description">
+                            {{ $adventure->description }}
+                        </div>
+                        <div class="adventure-rewards">
+                            <div class="reward-item">🗓️ {{ $adventure->updated_at->diffForHumans() }}</div>
+                            @if($adventure->status === 'completed')
+                            <div class="reward-item">✅ Success</div>
+                            @else
+                            <div class="reward-item">❌ Failed</div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="adventure-description">
-                        Help the local merchant deliver goods to the neighboring village safely.
+                    @endforeach
+                @else
+                    <div class="text-center py-4">
+                        <div class="mb-3" style="font-size: 3rem; opacity: 0.5;">✅</div>
+                        <h5 class="text-white-50">No Completed Adventures</h5>
+                        <p class="text-white-50 small">Complete adventures to build your legend!</p>
                     </div>
-                    <div class="adventure-rewards">
-                        <div class="reward-item">💰 75 Gold</div>
-                        <div class="reward-item">⭐ 20 XP</div>
-                    </div>
-                </div>
-
-                <div class="adventure-item" onclick="selectAdventure('missing-scholar')">
-                    <div class="adventure-difficulty difficulty-hard">H</div>
-                    <div class="adventure-header">
-                        <div class="adventure-title">🎓 The Missing Scholar</div>
-                        <div class="adventure-level">Level 5+</div>
-                    </div>
-                    <div class="adventure-description">
-                        A renowned scholar has gone missing while researching ancient magic. Find them before it's too late.
-                    </div>
-                    <div class="adventure-rewards">
-                        <div class="reward-item">💰 300 Gold</div>
-                        <div class="reward-item">📚 Spell Tome</div>
-                        <div class="reward-item">⭐ 150 XP</div>
-                    </div>
-                </div>
+                @endif
             </div>
         </div>
     </div>
@@ -606,24 +629,6 @@
         </div>
     </div>
 
-    <!-- Active Quest Panel - Center Right -->
-    <div class="active-quest-panel">
-        <div class="mb-2">
-            <div class="fw-bold small">🎯 Active Quest</div>
-        </div>
-        <div class="fw-bold mb-2">📦 Merchant's Delivery</div>
-        <div class="small mb-2">
-            Deliver goods safely to Riverside Village. Watch out for bandits on the road!
-        </div>
-
-        <div class="quest-progress">
-            <div class="small fw-bold">Progress: 3/5 Checkpoints</div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: 60%"></div>
-            </div>
-            <div class="small mt-1">Next: Cross the Old Bridge</div>
-        </div>
-    </div>
 
     <!-- Adventure Actions Panel - Bottom Right -->
     <div class="adventure-actions-panel">
@@ -631,12 +636,18 @@
             <div class="fw-bold small">⚡ Adventure Actions</div>
         </div>
 
-        <button class="adventure-btn danger" onclick="startSelectedAdventure()">
+        <button class="adventure-btn success" onclick="startSelectedAdventure()" id="start-adventure-btn" disabled>
             🚀 Start Adventure
         </button>
 
-        <button class="adventure-btn warning" onclick="continueCurrentQuest()">
-            ⏩ Continue Current Quest
+        <button class="adventure-btn warning" onclick="continueActiveAdventure()" id="continue-adventure-btn" 
+                {{ $activeAdventures->isEmpty() ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' }}>
+            ⏩ Continue Adventure
+        </button>
+
+        <button class="adventure-btn danger" onclick="abandonSelectedAdventure()" id="abandon-adventure-btn"
+                {{ $activeAdventures->isEmpty() ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' }}>
+            ❌ Abandon Adventure
         </button>
 
         <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
@@ -702,6 +713,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
 let selectedAdventureId = null;
 
+// Adventure Generator Form Submission
+document.getElementById('adventure-generator-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('generate-adventure-btn');
+    const spinner = btn.querySelector('.spinner-border');
+    const originalText = btn.innerHTML;
+    
+    // Show loading state
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Generating...';
+    
+    // Submit form data
+    const formData = new FormData(this);
+    
+    fetch('{{ route('game.generate-adventure') }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the page to show new adventure
+            window.location.reload();
+        } else {
+            alert('Failed to generate adventure: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while generating the adventure.');
+    })
+    .finally(() => {
+        // Reset button state
+        btn.disabled = false;
+        spinner.classList.add('d-none');
+        btn.innerHTML = originalText;
+    });
+});
+
 function selectAdventure(adventureId) {
     selectedAdventureId = adventureId;
 
@@ -712,24 +767,84 @@ function selectAdventure(adventureId) {
 
     // Highlight selected adventure
     event.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+    
+    // Enable start button
+    const startBtn = document.getElementById('start-adventure-btn');
+    startBtn.disabled = false;
+    startBtn.classList.remove('btn-secondary');
+    startBtn.classList.add('btn-success');
 
     console.log('Selected adventure:', adventureId);
 }
 
 function startSelectedAdventure() {
     if (selectedAdventureId) {
-        alert('Starting adventure: ' + selectedAdventureId + '\n\nThis would redirect to the adventure/combat system!');
-        // Here you would implement the actual adventure start logic
-        // window.location.href = '/game/adventure/start/' + selectedAdventureId;
+        // Create form and submit to start adventure
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/game/adventures/' + selectedAdventureId + '/start';
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     } else {
         alert('Please select an adventure first!');
     }
 }
 
-function continueCurrentQuest() {
-    alert('Continuing current quest...\n\nThis would resume the active quest!');
-    // Here you would implement quest continuation logic
-    // window.location.href = '/game/quest/continue';
+function continueAdventure(adventureId) {
+    window.location.href = '/game/adventure/' + adventureId;
+}
+
+function continueActiveAdventure() {
+    @if($activeAdventures->isNotEmpty())
+        @php
+            $firstActiveAdventure = $activeAdventures->first();
+            $hasNodeMap = isset($firstActiveAdventure->generated_map) && 
+                         isset($firstActiveAdventure->generated_map['map']) && 
+                         isset($firstActiveAdventure->generated_map['map']['nodes']);
+        @endphp
+        @if($hasNodeMap)
+            continueAdventure('{{ $firstActiveAdventure->id }}');
+        @else
+            alert('This adventure has no node map and cannot be continued. Please abandon it and generate a new adventure.');
+        @endif
+    @else
+        alert('No active adventures to continue.');
+    @endif
+}
+
+function abandonSelectedAdventure() {
+    @if($activeAdventures->isNotEmpty())
+        if (confirm('Are you sure you want to abandon your current adventure? All progress will be lost!')) {
+            // Create form and submit to abandon adventure
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/game/adventures/{{ $activeAdventures->first()->id }}/abandon';
+            
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = '_token';
+                csrfInput.value = csrfToken.getAttribute('content');
+                form.appendChild(csrfInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    @else
+        alert('No active adventures to abandon.');
+    @endif
 }
 </script>
 @endpush

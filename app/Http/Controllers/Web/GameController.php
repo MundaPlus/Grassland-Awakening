@@ -104,7 +104,7 @@ class GameController extends Controller
         try {
             $request->validate([
                 'seed' => 'nullable|string',
-                'difficulty' => 'nullable|in:,easy,medium,hard,expert',
+                'difficulty' => 'nullable|in:,easy,normal,hard,nightmare',
                 'road_type' => 'nullable|string'
             ]);
 
@@ -130,7 +130,7 @@ class GameController extends Controller
                     if ($player->level >= 10) {
                         $difficulty = 'hard';
                     } elseif ($player->level >= 5) {
-                        $difficulty = 'medium';
+                        $difficulty = 'normal';
                     } else {
                         $difficulty = 'easy';
                     }
@@ -443,7 +443,16 @@ class GameController extends Controller
                 'materials' => $player->getAvailableItemsByType('material')
             ],
             'equippedItems' => $player->equippedItems()->with('item')->get(),
-            'allPlayerItems' => $player->playerItems()->with('item')->get()
+            'allPlayerItems' => $player->playerItems()->with('item')->get(),
+            'inventoryItems' => $player->playerItems()
+                ->with('item')
+                ->where('is_equipped', false)
+                ->whereHas('item', function($query) {
+                    $query->whereIn('type', ['weapon', 'armor', 'accessory']);
+                })
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
         ];
 
         return view('game.character', $data);
@@ -2184,7 +2193,8 @@ class GameController extends Controller
         $playerItem = $player->playerItems()->with('item')->findOrFail($id);
 
         if (!$playerItem->canUnequip()) {
-            return response()->json(['error' => 'Cannot unequip this item'], 400);
+            return redirect()->route('game.character')
+                ->with('error', 'Cannot unequip this item.');
         }
 
         $playerItem->update([
@@ -2192,11 +2202,8 @@ class GameController extends Controller
             'equipment_slot' => null
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Unequipped {$playerItem->item->name} successfully!",
-            'item' => $playerItem->item
-        ]);
+        return redirect()->route('game.character')
+            ->with('success', "Unequipped {$playerItem->item->name} successfully!");
     }
 
     /**
@@ -2275,18 +2282,14 @@ class GameController extends Controller
         $adventure = $player->adventures()->findOrFail($adventureId);
 
         if ($adventure->status !== 'active') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Adventure is not active'
-            ]);
+            return redirect()->route('game.adventures')
+                ->with('error', 'Adventure is not active and cannot be abandoned.');
         }
 
         $adventure->abandon();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Adventure abandoned successfully'
-        ]);
+        return redirect()->route('game.adventures')
+            ->with('success', 'Adventure abandoned successfully!');
     }
 
     public function trainNPC(Request $request, $npcId)
@@ -2328,6 +2331,21 @@ class GameController extends Controller
     }
 
     // Crafting Methods
+
+    public function crafting()
+    {
+        $player = $this->getOrCreatePlayer();
+        
+        $craftingService = app(\App\Services\CraftingService::class);
+        $availableRecipes = $craftingService->getAvailableRecipesForPlayer($player);
+        $materials = $player->inventoryItems()->where('item_type', 'material')->with('item')->get();
+        
+        return view('game.crafting', [
+            'player' => $player,
+            'availableRecipes' => $availableRecipes,
+            'materials' => $materials
+        ]);
+    }
 
     public function getCraftingRecipes(Request $request)
     {
