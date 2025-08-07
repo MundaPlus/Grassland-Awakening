@@ -69,9 +69,18 @@ class CraftingRecipe extends Model
     public function hasRequiredMaterials(Player $player): bool
     {
         foreach ($this->materials as $material) {
-            $hasQuantity = $player->inventory->items()
+            // Check old inventory system
+            $oldInventoryQuantity = $player->inventory()
                 ->where('item_id', $material->material_item_id)
                 ->sum('quantity');
+            
+            // Check new PlayerItem system (unequipped items)
+            $newInventoryQuantity = $player->playerItems()
+                ->where('item_id', $material->material_item_id)
+                ->where('is_equipped', false)
+                ->sum('quantity');
+            
+            $hasQuantity = $oldInventoryQuantity + $newInventoryQuantity;
             
             if ($hasQuantity < $material->quantity_required) {
                 return false;
@@ -86,9 +95,18 @@ class CraftingRecipe extends Model
         $missing = [];
         
         foreach ($this->materials as $material) {
-            $hasQuantity = $player->inventory->items()
+            // Check old inventory system
+            $oldInventoryQuantity = $player->inventory()
                 ->where('item_id', $material->material_item_id)
                 ->sum('quantity');
+            
+            // Check new PlayerItem system (unequipped items)
+            $newInventoryQuantity = $player->playerItems()
+                ->where('item_id', $material->material_item_id)
+                ->where('is_equipped', false)
+                ->sum('quantity');
+            
+            $hasQuantity = $oldInventoryQuantity + $newInventoryQuantity;
             
             $needed = $material->quantity_required - $hasQuantity;
             if ($needed > 0) {

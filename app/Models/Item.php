@@ -92,6 +92,8 @@ class Item extends Model
 
     public function getEquipmentSlot(): ?string
     {
+        // Accessories are handled by their specific subtypes in the match statement below
+
         return match($this->subtype) {
             self::SUBTYPE_HELMET => 'helm',
             self::SUBTYPE_CHEST => 'chest',

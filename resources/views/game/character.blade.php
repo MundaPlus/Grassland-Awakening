@@ -256,6 +256,36 @@
         font-weight: bold;
         margin-bottom: 5px;
     }
+
+    .stat-allocation-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .stat-allocation-controls .btn-sm {
+        width: 25px;
+        height: 25px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        border-radius: 50%;
+    }
+
+    .allocated-points {
+        min-width: 20px;
+        text-align: center;
+        font-weight: bold;
+        color: #ffc107;
+    }
+
+    .alert {
+        border-radius: 8px;
+        padding: 10px;
+    }
     
     .ability-score-label {
         font-size: 0.8em;
@@ -602,32 +632,61 @@
     <div class="character-stats-panel">
         <div class="mb-3">
             <h2 class="h6 mb-3">⚔️ Ability Scores</h2>
+            @if($player->unallocated_stat_points > 0)
+                <div class="alert alert-info mb-3" style="background: rgba(13, 110, 253, 0.1); border: 1px solid rgba(13, 110, 253, 0.3); color: #9fc5e8;">
+                    <strong>{{ $player->unallocated_stat_points }}</strong> stat points available to allocate!
+                </div>
+            @endif
             <div class="ability-scores">
-                <div class="ability-score">
-                    <div class="ability-score-value">{{ $player->str }}</div>
-                    <div class="ability-score-label">Strength</div>
-                </div>
-                <div class="ability-score">
-                    <div class="ability-score-value">{{ $player->dex }}</div>
-                    <div class="ability-score-label">Dexterity</div>
-                </div>
-                <div class="ability-score">
-                    <div class="ability-score-value">{{ $player->con }}</div>
-                    <div class="ability-score-label">Constitution</div>
-                </div>
-                <div class="ability-score">
-                    <div class="ability-score-value">{{ $player->int }}</div>
-                    <div class="ability-score-label">Intelligence</div>
-                </div>
-                <div class="ability-score">
-                    <div class="ability-score-value">{{ $player->wis }}</div>
-                    <div class="ability-score-label">Wisdom</div>
-                </div>
-                <div class="ability-score">
-                    <div class="ability-score-value">{{ $player->cha }}</div>
-                    <div class="ability-score-label">Charisma</div>
-                </div>
+                @php
+                    $stats = [
+                        'str' => ['name' => 'Strength', 'value' => $player->str],
+                        'dex' => ['name' => 'Dexterity', 'value' => $player->dex], 
+                        'con' => ['name' => 'Constitution', 'value' => $player->con],
+                        'int' => ['name' => 'Intelligence', 'value' => $player->int],
+                        'wis' => ['name' => 'Wisdom', 'value' => $player->wis],
+                        'cha' => ['name' => 'Charisma', 'value' => $player->cha]
+                    ];
+                @endphp
+                
+                @foreach($stats as $statKey => $stat)
+                    <div class="ability-score">
+                        <div class="ability-score-value" id="total-{{ $statKey }}">{{ $stat['value'] }}</div>
+                        <div class="ability-score-label">{{ $stat['name'] }}</div>
+                        @if($player->unallocated_stat_points > 0)
+                            <div class="stat-allocation-controls mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger me-1" 
+                                        onclick="adjustStat('{{ $statKey }}', -1)" 
+                                        id="minus-{{ $statKey }}" disabled>-</button>
+                                <span class="allocated-points" id="allocated-{{ $statKey }}">0</span>
+                                <button type="button" class="btn btn-sm btn-outline-success ms-1" 
+                                        onclick="adjustStat('{{ $statKey }}', 1)" 
+                                        id="plus-{{ $statKey }}">+</button>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
             </div>
+            
+            @if($player->unallocated_stat_points > 0)
+                <div class="text-center mt-3">
+                    <div class="mb-2">
+                        <strong>Remaining Points:</strong> <span id="remaining-points" class="text-warning">{{ $player->unallocated_stat_points }}</span>
+                    </div>
+                    <form id="allocate-stats-form" method="POST" action="{{ route('game.allocate-stats') }}">
+                        @csrf
+                        @foreach($stats as $statKey => $stat)
+                            <input type="hidden" name="{{ $statKey }}_points" id="{{ $statKey }}-points-input" value="0">
+                        @endforeach
+                        <button type="button" class="btn btn-success me-2" onclick="allocateStats()" id="allocate-btn" disabled>
+                            🎯 Allocate Points
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetAllocation()">
+                            🔄 Reset
+                        </button>
+                    </form>
+                </div>
+            @endif
         </div>
 
         <div class="character-info">
@@ -955,6 +1014,101 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+let allocatedPoints = {
+    str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0
+};
+
+const maxPoints = {{ $player->unallocated_stat_points }};
+const baseStat = {
+    str: {{ $player->str }},
+    dex: {{ $player->dex }},
+    con: {{ $player->con }},
+    int: {{ $player->int }},
+    wis: {{ $player->wis }},
+    cha: {{ $player->cha }}
+};
+
+function adjustStat(stat, change) {
+    const currentAllocated = allocatedPoints[stat];
+    const totalAllocated = Object.values(allocatedPoints).reduce((sum, val) => sum + val, 0);
+    
+    if (change > 0 && totalAllocated >= maxPoints) {
+        return; // Cannot allocate more points
+    }
+    
+    if (change < 0 && currentAllocated <= 0) {
+        return; // Cannot reduce below 0
+    }
+    
+    allocatedPoints[stat] += change;
+    updateUI();
+}
+
+function updateUI() {
+    const totalAllocated = Object.values(allocatedPoints).reduce((sum, val) => sum + val, 0);
+    const remainingPoints = maxPoints - totalAllocated;
+    
+    // Update remaining points display
+    document.getElementById('remaining-points').textContent = remainingPoints;
+    
+    // Update each stat
+    Object.keys(allocatedPoints).forEach(stat => {
+        const allocated = allocatedPoints[stat];
+        const total = baseStat[stat] + allocated;
+        
+        // Update displays
+        document.getElementById(`total-${stat}`).textContent = total;
+        document.getElementById(`allocated-${stat}`).textContent = allocated;
+        document.getElementById(`${stat}-points-input`).value = allocated;
+        
+        // Update buttons
+        const minusBtn = document.getElementById(`minus-${stat}`);
+        const plusBtn = document.getElementById(`plus-${stat}`);
+        
+        minusBtn.disabled = allocated <= 0;
+        plusBtn.disabled = remainingPoints <= 0;
+    });
+    
+    // Update allocate button
+    const allocateBtn = document.getElementById('allocate-btn');
+    if (allocateBtn) {
+        allocateBtn.disabled = totalAllocated === 0;
+    }
+}
+
+function resetAllocation() {
+    Object.keys(allocatedPoints).forEach(stat => {
+        allocatedPoints[stat] = 0;
+    });
+    updateUI();
+}
+
+function allocateStats() {
+    const form = document.getElementById('allocate-stats-form');
+    const totalAllocated = Object.values(allocatedPoints).reduce((sum, val) => sum + val, 0);
+    
+    if (totalAllocated === 0) {
+        alert('Please allocate at least one stat point before submitting.');
+        return;
+    }
+    
+    // Remove confirmation - user already confirmed by clicking the button
+    
+    // Submit the form
+    form.submit();
+}
+
+// Initialize UI on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (maxPoints > 0) {
+        updateUI();
+    }
+});
+</script>
+@endpush
 
 @push('scripts')
 <script>

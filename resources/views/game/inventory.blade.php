@@ -68,7 +68,7 @@
         position: absolute;
         top: 140px;
         left: 20px;
-        width: 50%;
+        width: 80%;
         height: calc(100vh - 300px);
         background: rgba(33, 37, 41, 0.9);
         backdrop-filter: blur(15px);
@@ -817,6 +817,9 @@
             </a>
             <a href="{{ route('game.character') }}" class="dashboard-btn primary">
                 👤 Character
+            </a>
+            <a href="{{ route('game.crafting') }}" class="dashboard-btn warning">
+                🔨 Crafting
             </a>
             <a href="{{ route('game.village') }}" class="dashboard-btn success">
                 🏘️ Village

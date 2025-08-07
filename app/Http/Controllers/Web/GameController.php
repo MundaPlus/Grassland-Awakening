@@ -751,8 +751,18 @@ class GameController extends Controller
             return redirect()->route('game.character')
                 ->with('success', 'Item equipped successfully!');
         } else {
+            // Add more specific error information for debugging
+            $errorMsg = 'Unable to equip item. ';
+            if (!$item->is_equippable) {
+                $errorMsg .= 'Item is not equippable. ';
+            }
+            if ($player->level < $item->level_requirement) {
+                $errorMsg .= 'Level requirement not met. ';
+            }
+            $errorMsg .= "Item: {$item->name}, Slot: {$slot}, Type: {$item->type}, Subtype: {$item->subtype}";
+            
             return redirect()->route('game.character')
-                ->with('error', 'Unable to equip item. Check level requirements and item type.');
+                ->with('error', $errorMsg);
         }
     }
 
@@ -856,6 +866,39 @@ class GameController extends Controller
             
             // Default to ring_1 if no player context or both slots occupied
             return 'ring_1';
+        }
+
+        // Handle necklaces
+        if ($item->subtype === \App\Models\Item::SUBTYPE_NECKLACE || $item->subtype === 'necklace') {
+            return 'neck';
+        }
+
+        // Handle artifacts - check both artifact slots and use first empty
+        if ($item->subtype === \App\Models\Item::SUBTYPE_ARTIFACT) {
+            if ($player) {
+                // Check if artifact_1 is empty
+                $artifact1Equipped = $player->playerItems()
+                    ->where('is_equipped', true)
+                    ->where('equipment_slot', 'artifact_1')
+                    ->exists();
+                
+                if (!$artifact1Equipped) {
+                    return 'artifact_1';
+                }
+                
+                // Check if artifact_2 is empty
+                $artifact2Equipped = $player->playerItems()
+                    ->where('is_equipped', true)
+                    ->where('equipment_slot', 'artifact_2')
+                    ->exists();
+                
+                if (!$artifact2Equipped) {
+                    return 'artifact_2';
+                }
+            }
+            
+            // Default to artifact_1 if no player context or both slots occupied
+            return 'artifact_1';
         }
 
         return null;
@@ -2394,7 +2437,9 @@ class GameController extends Controller
         
         $craftingService = app(\App\Services\CraftingService::class);
         $availableRecipes = $craftingService->getAvailableRecipesForPlayer($player);
-        $materials = $player->inventoryItems()->where('item_type', 'material')->with('item')->get();
+        $materials = $player->inventory()->whereHas('item', function($query) {
+            $query->where('type', 'crafting_material');
+        })->with('item')->get();
         
         return view('game.crafting', [
             'player' => $player,
@@ -2432,21 +2477,40 @@ class GameController extends Controller
             $craftingService = app(\App\Services\CraftingService::class);
             $result = $craftingService->craftItem($player, $recipe);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Item crafted successfully!',
-                'item' => $result['item'],
-                'quantity' => $result['quantity'],
-                'experience_gained' => $result['experience_gained'],
-                'gold_spent' => $result['gold_spent'],
-                'player_gold' => $player->fresh()->persistent_currency
-            ]);
+            // Check if this is an API request
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Item crafted successfully!',
+                    'item' => $result['item'],
+                    'quantity' => $result['quantity'],
+                    'experience_gained' => $result['experience_gained'],
+                    'gold_spent' => $result['gold_spent'],
+                    'player_gold' => $player->fresh()->persistent_currency
+                ]);
+            }
+
+            // Web request - redirect with success message
+            $successMessage = "Successfully crafted {$result['quantity']}x {$recipe->name}!";
+            if ($result['experience_gained'] > 0) {
+                $successMessage .= " (+{$result['experience_gained']} XP)";
+            }
+
+            return redirect()->route('game.crafting')
+                ->with('success', $successMessage);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
+            // Check if this is an API request
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], 400);
+            }
+
+            // Web request - redirect with error message
+            return redirect()->route('game.crafting')
+                ->with('error', $e->getMessage());
         }
     }
 

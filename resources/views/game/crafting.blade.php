@@ -201,6 +201,32 @@
         border: 3px solid #28a745;
         border-style: solid;
     }
+
+    .crafting-slot.missing {
+        background: rgba(220, 53, 69, 0.9);
+        border: 3px solid #dc3545;
+        border-style: solid;
+    }
+
+    .slot-label {
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        opacity: 0.8;
+        white-space: nowrap;
+    }
+
+    .recipe-item.cannot-craft {
+        opacity: 0.6;
+    }
+
+    .recipe-missing {
+        font-size: 0.7rem;
+        color: #dc3545;
+        margin-top: 4px;
+    }
     
     .result-slot {
         width: 100px;
@@ -451,49 +477,57 @@
         
         <!-- Recipes List -->
         <div class="recipes-list">
-            <div class="recipe-category" data-category="weapons">
-                <div class="recipe-item" data-recipe="iron-sword">
-                    <div class="recipe-name">Iron Sword ⚔️</div>
-                    <div class="recipe-materials">3x Iron Ingot, 1x Wood</div>
-                    <div class="recipe-level">Level 1</div>
+            @if(isset($availableRecipes) && count($availableRecipes) > 0)
+                @php
+                    $recipesByCategory = collect($availableRecipes)->groupBy(function($recipeData) {
+                        return $recipeData['recipe']->category ?? 'misc';
+                    });
+                @endphp
+                
+                @foreach(['weapon' => 'weapons', 'armor' => 'armor', 'consumable' => 'consumables'] as $category => $displayCategory)
+                    <div class="recipe-category" data-category="{{ $displayCategory }}" style="{{ $displayCategory === 'weapons' ? '' : 'display: none;' }}">
+                        @if(isset($recipesByCategory[$category]))
+                            @foreach($recipesByCategory[$category] as $recipeData)
+                                @php
+                                    $recipe = $recipeData['recipe'];
+                                    $canCraft = $recipeData['can_craft'];
+                                    $missingMaterials = $recipeData['missing_materials'];
+                                @endphp
+                                <div class="recipe-item {{ $canCraft ? 'can-craft' : 'cannot-craft' }}" 
+                                     data-recipe-id="{{ $recipe->id }}"
+                                     data-recipe="{{ Str::slug($recipe->name) }}">
+                                    <div class="recipe-name">{{ $recipe->name }}</div>
+                                    <div class="recipe-materials">
+                                        @foreach($recipe->materials as $material)
+                                            {{ $material->quantity_required }}x {{ $material->materialItem->name }}{{ !$loop->last ? ', ' : '' }}
+                                        @endforeach
+                                    </div>
+                                    <div class="recipe-level">Level {{ $recipe->difficulty ?? 1 }}</div>
+                                    @if(!$canCraft && count($missingMaterials) > 0)
+                                        <div class="recipe-missing" style="font-size: 0.7rem; color: #dc3545; margin-top: 4px;">
+                                            Missing: 
+                                            @foreach($missingMaterials as $missing)
+                                                {{ $missing['needed'] }}x {{ $missing['item']->name }}{{ !$loop->last ? ', ' : '' }}
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📝</div>
+                                <div>No {{ $displayCategory }} recipes available</div>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            @else
+                <div class="empty-state">
+                    <div class="empty-state-icon">📚</div>
+                    <div>No recipes learned yet</div>
+                    <div class="small mt-2">Discover recipes through adventures!</div>
                 </div>
-                <div class="recipe-item" data-recipe="steel-dagger">
-                    <div class="recipe-name">Steel Dagger 🗡️</div>
-                    <div class="recipe-materials">2x Steel Ingot, 1x Leather</div>
-                    <div class="recipe-level">Level 3</div>
-                </div>
-                <div class="recipe-item" data-recipe="fire-staff">
-                    <div class="recipe-name">Fire Staff 🔥</div>
-                    <div class="recipe-materials">1x Magic Crystal, 2x Wood, 1x Fire Essence</div>
-                    <div class="recipe-level">Level 5</div>
-                </div>
-            </div>
-            
-            <div class="recipe-category" data-category="armor" style="display: none;">
-                <div class="recipe-item" data-recipe="leather-armor">
-                    <div class="recipe-name">Leather Armor 👕</div>
-                    <div class="recipe-materials">5x Leather, 2x Thread</div>
-                    <div class="recipe-level">Level 1</div>
-                </div>
-                <div class="recipe-item" data-recipe="iron-helmet">
-                    <div class="recipe-name">Iron Helmet ⛑️</div>
-                    <div class="recipe-materials">4x Iron Ingot, 1x Cloth</div>
-                    <div class="recipe-level">Level 2</div>
-                </div>
-            </div>
-            
-            <div class="recipe-category" data-category="consumables" style="display: none;">
-                <div class="recipe-item" data-recipe="health-potion">
-                    <div class="recipe-name">Health Potion 🧪</div>
-                    <div class="recipe-materials">2x Red Herb, 1x Water, 1x Glass Vial</div>
-                    <div class="recipe-level">Level 1</div>
-                </div>
-                <div class="recipe-item" data-recipe="mana-potion">
-                    <div class="recipe-name">Mana Potion 💙</div>
-                    <div class="recipe-materials">2x Blue Herb, 1x Water, 1x Glass Vial</div>
-                    <div class="recipe-level">Level 2</div>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
 
@@ -502,34 +536,41 @@
         <h3 class="mb-3">🛠️ Crafting Station</h3>
         
         <div class="mb-3">
-            <div class="small mb-2">Place materials in the slots below:</div>
-            <div class="crafting-slots">
+            <div class="small mb-2">Required materials for selected recipe:</div>
+            <div class="crafting-slots" id="material-slots">
                 <div class="crafting-slot" data-slot="0">
                     <div class="slot-icon">📦</div>
+                    <div class="slot-label">Material 1</div>
                 </div>
                 <div class="crafting-slot" data-slot="1">
                     <div class="slot-icon">📦</div>
+                    <div class="slot-label">Material 2</div>
                 </div>
                 <div class="crafting-slot" data-slot="2">
                     <div class="slot-icon">📦</div>
+                    <div class="slot-label">Material 3</div>
                 </div>
             </div>
         </div>
         
         <div class="mb-3">
             <div class="small mb-2">Result:</div>
-            <div class="result-slot">
+            <div class="result-slot" id="result-slot">
                 <div class="slot-icon">❓</div>
             </div>
         </div>
         
-        <button class="craft-button" disabled>
-            🔨 Craft Item
-        </button>
+        <form id="craft-form" method="POST" action="{{ route('game.crafting-craft') }}">
+            @csrf
+            <input type="hidden" id="selected-recipe-id" name="recipe_id" value="">
+            <button type="submit" class="craft-button" id="craft-button" disabled>
+                🔨 Craft Item
+            </button>
+        </form>
         
         <div class="mt-3">
-            <div class="small opacity-75">
-                Select a recipe from the left panel or drag materials to the slots above
+            <div class="small opacity-75" id="craft-instructions">
+                Select a recipe from the left panel to see required materials
             </div>
         </div>
     </div>
@@ -541,45 +582,25 @@
         </div>
         
         <div class="materials-list">
-            <div class="material-item" data-material="iron-ingot">
-                <div class="material-icon" style="background: #8B4513; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">⚒️</div>
-                <div class="material-info">
-                    <div class="material-name">Iron Ingot</div>
-                    <div class="material-quantity">Quantity: 12</div>
+            @if(isset($materials) && count($materials) > 0)
+                @foreach($materials as $inventoryItem)
+                    <div class="material-item" data-material-id="{{ $inventoryItem->item->id }}" data-material="{{ Str::slug($inventoryItem->item->name) }}">
+                        <div class="material-icon" style="background: #6c757d; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;">
+                            {{ $inventoryItem->item->icon ?? '📦' }}
+                        </div>
+                        <div class="material-info">
+                            <div class="material-name">{{ $inventoryItem->item->name }}</div>
+                            <div class="material-quantity">Quantity: {{ $inventoryItem->quantity }}</div>
+                        </div>
+                    </div>
+                @endforeach
+            @else
+                <div class="empty-state">
+                    <div class="empty-state-icon">📦</div>
+                    <div>No crafting materials</div>
+                    <div class="small mt-2">Gather materials through adventures!</div>
                 </div>
-            </div>
-            
-            <div class="material-item" data-material="wood">
-                <div class="material-icon" style="background: #8B4513; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">🪵</div>
-                <div class="material-info">
-                    <div class="material-name">Wood</div>
-                    <div class="material-quantity">Quantity: 8</div>
-                </div>
-            </div>
-            
-            <div class="material-item" data-material="leather">
-                <div class="material-icon" style="background: #8B4513; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">🦌</div>
-                <div class="material-info">
-                    <div class="material-name">Leather</div>
-                    <div class="material-quantity">Quantity: 5</div>
-                </div>
-            </div>
-            
-            <div class="material-item" data-material="red-herb">
-                <div class="material-icon" style="background: #228B22; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">🌿</div>
-                <div class="material-info">
-                    <div class="material-name">Red Herb</div>
-                    <div class="material-quantity">Quantity: 15</div>
-                </div>
-            </div>
-            
-            <div class="material-item" data-material="glass-vial">
-                <div class="material-icon" style="background: #87CEEB; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">🧪</div>
-                <div class="material-info">
-                    <div class="material-name">Glass Vial</div>
-                    <div class="material-quantity">Quantity: 3</div>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
 
@@ -611,6 +632,10 @@
 
 @push('scripts')
 <script>
+let selectedRecipe = null;
+let availableRecipes = @json($availableRecipes ?? []);
+let playerMaterials = @json($materials ?? []);
+
 // Recipe category switching
 document.addEventListener('DOMContentLoaded', function() {
     const tabs = document.querySelectorAll('.recipe-tab');
@@ -639,35 +664,132 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipes = document.querySelectorAll('.recipe-item');
     recipes.forEach(recipe => {
         recipe.addEventListener('click', function() {
-            // Remove previous selection
-            recipes.forEach(r => r.classList.remove('selected'));
-            // Add selection to clicked recipe
-            this.classList.add('selected');
+            const recipeId = this.getAttribute('data-recipe-id');
+            selectRecipe(recipeId, this);
+        });
+    });
+    
+    // Craft button functionality
+    const craftForm = document.getElementById('craft-form');
+    if (craftForm) {
+        craftForm.addEventListener('submit', function(e) {
+            const craftButton = document.getElementById('craft-button');
+            if (craftButton.disabled) {
+                e.preventDefault();
+                return;
+            }
             
-            // Enable craft button (placeholder functionality)
-            const craftButton = document.querySelector('.craft-button');
-            craftButton.disabled = false;
-            craftButton.textContent = '🔨 Craft ' + this.querySelector('.recipe-name').textContent;
+            if (!confirm('Are you sure you want to craft this item?')) {
+                e.preventDefault();
+            }
         });
+    }
+});
+
+function selectRecipe(recipeId, recipeElement) {
+    // Remove previous selection
+    document.querySelectorAll('.recipe-item').forEach(r => r.classList.remove('selected'));
+    // Add selection to clicked recipe
+    recipeElement.classList.add('selected');
+    
+    // Find the recipe data
+    const recipeData = availableRecipes.find(r => r.recipe.id == recipeId);
+    if (!recipeData) {
+        console.error('Recipe not found:', recipeId);
+        return;
+    }
+    
+    selectedRecipe = recipeData;
+    
+    // Update the crafting area
+    updateCraftingArea(recipeData);
+    
+    // Update the craft button
+    updateCraftButton(recipeData);
+    
+    // Set the selected recipe ID in the form
+    document.getElementById('selected-recipe-id').value = recipeId;
+}
+
+function updateCraftingArea(recipeData) {
+    const recipe = recipeData.recipe;
+    const materials = recipe.materials || [];
+    const materialSlots = document.querySelectorAll('#material-slots .crafting-slot');
+    
+    // Clear all slots first
+    materialSlots.forEach((slot, index) => {
+        slot.innerHTML = '<div class="slot-icon">📦</div><div class="slot-label">Material ' + (index + 1) + '</div>';
+        slot.classList.remove('filled', 'missing');
     });
     
-    // Material clicking (placeholder functionality)
-    const materials = document.querySelectorAll('.material-item');
-    materials.forEach(material => {
-        material.addEventListener('click', function() {
-            console.log('Selected material:', this.getAttribute('data-material'));
-            // Here you would implement material selection/dragging logic
-        });
-    });
-    
-    // Craft button functionality (placeholder)
-    const craftButton = document.querySelector('.craft-button');
-    craftButton.addEventListener('click', function() {
-        if (!this.disabled) {
-            alert('Crafting functionality would be implemented here!');
-            // Here you would implement the actual crafting logic
+    // Fill slots with required materials
+    materials.forEach((material, index) => {
+        if (index < materialSlots.length) {
+            const slot = materialSlots[index];
+            const hasEnough = hasPlayerMaterial(material.material_item_id, material.quantity_required);
+            
+            slot.innerHTML = `
+                <div class="slot-icon">${material.material_item?.icon || '📦'}</div>
+                <div class="slot-label">${material.quantity_required}x ${material.material_item?.name || 'Unknown'}</div>
+            `;
+            
+            if (hasEnough) {
+                slot.classList.add('filled');
+                slot.classList.remove('missing');
+            } else {
+                slot.classList.add('missing');
+                slot.classList.remove('filled');
+            }
         }
     });
-});
+    
+    // Update result slot
+    const resultSlot = document.getElementById('result-slot');
+    if (resultSlot && recipe.result_item) {
+        resultSlot.innerHTML = `
+            <div class="slot-icon">${recipe.result_item.icon || '❓'}</div>
+            <div class="slot-label">${recipe.result_quantity || 1}x ${recipe.result_item.name}</div>
+        `;
+    }
+    
+    // Update instructions
+    const instructions = document.getElementById('craft-instructions');
+    if (instructions) {
+        if (recipeData.can_craft) {
+            instructions.textContent = 'All materials available! Click craft to create this item.';
+            instructions.style.color = '#28a745';
+        } else {
+            const missingMaterials = recipeData.missing_materials || [];
+            if (missingMaterials.length > 0) {
+                const missingNames = missingMaterials.map(m => `${m.needed}x ${m.item.name}`).join(', ');
+                instructions.textContent = `Missing materials: ${missingNames}`;
+                instructions.style.color = '#dc3545';
+            } else {
+                instructions.textContent = 'Requirements not met for this recipe.';
+                instructions.style.color = '#ffc107';
+            }
+        }
+    }
+}
+
+function updateCraftButton(recipeData) {
+    const craftButton = document.getElementById('craft-button');
+    const recipe = recipeData.recipe;
+    
+    if (recipeData.can_craft) {
+        craftButton.disabled = false;
+        craftButton.textContent = `🔨 Craft ${recipe.name}`;
+        craftButton.style.background = 'linear-gradient(135deg, #28a745, #1e7e34)';
+    } else {
+        craftButton.disabled = true;
+        craftButton.textContent = `❌ Cannot Craft ${recipe.name}`;
+        craftButton.style.background = 'linear-gradient(135deg, #6c757d, #495057)';
+    }
+}
+
+function hasPlayerMaterial(materialItemId, requiredQuantity) {
+    const playerMaterial = playerMaterials.find(m => m.item.id == materialItemId);
+    return playerMaterial && playerMaterial.quantity >= requiredQuantity;
+}
 </script>
 @endpush
