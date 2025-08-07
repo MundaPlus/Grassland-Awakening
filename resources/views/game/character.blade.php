@@ -293,7 +293,7 @@
         position: absolute;
         top: 120px;
         right: 20px;
-        width: 300px;
+        width: 600px;
         background: rgba(220, 53, 69, 0.9);
         backdrop-filter: blur(15px);
         border: 2px solid rgba(255, 255, 255, 0.3);
@@ -347,6 +347,43 @@
         font-size: 0.7em;
         opacity: 0.7;
         margin-top: 3px;
+    }
+
+    /* Inventory Tabs */
+    .inventory-tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .inventory-tab {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.7);
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        flex: 1;
+        text-align: center;
+        min-width: 80px;
+    }
+
+    .inventory-tab.active,
+    .inventory-tab:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .inventory-category {
+        display: none;
+    }
+
+    .inventory-category.active {
+        display: block;
     }
     
     /* Actions Panel - Bottom Right */
@@ -484,7 +521,7 @@
         
         <div class="header-stats">
             <div class="header-stat">
-                <div class="header-stat-value text-success">{{ $player->current_health }}/{{ $player->health }}</div>
+                <div class="header-stat-value text-success">{{ $player->hp }}/{{ $player->max_hp }}</div>
                 <div class="header-stat-label">Health</div>
             </div>
             <div class="header-stat">
@@ -496,11 +533,11 @@
                 <div class="header-stat-label">Skill Points</div>
             </div>
             <div class="header-stat">
-                <div class="header-stat-value text-warning">{{ number_format($player->gold) }}</div>
+                <div class="header-stat-value text-warning">{{ number_format($player->persistent_currency) }}</div>
                 <div class="header-stat-label">Gold</div>
             </div>
             <div class="header-stat">
-                <div class="header-stat-value text-primary">{{ $player->armor ?? 0 }}</div>
+                <div class="header-stat-value text-primary">{{ $player->getTotalAC() }}</div>
                 <div class="header-stat-label">Armor</div>
             </div>
         </div>
@@ -540,7 +577,13 @@
                  data-slot="{{ $slot }}"
                  @if(isset($equipment[$slot]) && $equipment[$slot])
                      onclick="unequipPlayerItem({{ $equipment[$slot]->id }})"
-                     title="{{ method_exists($equipment[$slot], 'getDisplayName') ? $equipment[$slot]->getDisplayName() : $equipment[$slot]->item->name }} (Click to unequip)"
+                     data-item-name="{{ method_exists($equipment[$slot], 'getDisplayName') ? $equipment[$slot]->getDisplayName() : $equipment[$slot]->item->name }}"
+                     data-item-rarity="{{ $equipment[$slot]->item->rarity }}"
+                     data-item-type="{{ ucfirst(str_replace('_', ' ', $equipment[$slot]->item->type)) }}"
+                     data-item-attack="{{ $equipment[$slot]->item->damage_bonus ?? 0 }}"
+                     data-item-defense="{{ $equipment[$slot]->item->ac_bonus ?? 0 }}"
+                     data-item-description="{{ $equipment[$slot]->item->description ?? '' }}"
+                     title="Click to unequip"
                  @else
                      title="{{ $config[1] }}"
                  @endif>
@@ -588,23 +631,66 @@
         </div>
 
         <div class="character-info">
-            <h3 class="h6 mb-2">📊 Character Info</h3>
-            <div class="info-row">
-                <span class="info-label">Class:</span>
-                <span class="info-value">{{ ucfirst($player->character_class ?? 'Adventurer') }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Background:</span>
-                <span class="info-value">{{ ucfirst($player->background ?? 'Common Folk') }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Gender:</span>
-                <span class="info-value">{{ ucfirst($player->gender) }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Created:</span>
-                <span class="info-value">{{ $player->created_at->format('M j, Y') }}</span>
-            </div>
+            <h3 class="h6 mb-2">⚡ Equipment Bonuses</h3>
+            @if(isset($equipmentBonuses))
+                @if($equipmentBonuses['str'] != 0)
+                <div class="info-row">
+                    <span class="info-label">💪 Strength:</span>
+                    <span class="info-value text-success">+{{ $equipmentBonuses['str'] }}</span>
+                </div>
+                @endif
+                @if($equipmentBonuses['dex'] != 0)
+                <div class="info-row">
+                    <span class="info-label">🏃 Dexterity:</span>
+                    <span class="info-value text-success">+{{ $equipmentBonuses['dex'] }}</span>
+                </div>
+                @endif
+                @if($equipmentBonuses['con'] != 0)
+                <div class="info-row">
+                    <span class="info-label">🛡️ Constitution:</span>
+                    <span class="info-value text-success">+{{ $equipmentBonuses['con'] }}</span>
+                </div>
+                @endif
+                @if($equipmentBonuses['int'] != 0)
+                <div class="info-row">
+                    <span class="info-label">🧠 Intelligence:</span>
+                    <span class="info-value text-success">+{{ $equipmentBonuses['int'] }}</span>
+                </div>
+                @endif
+                @if($equipmentBonuses['wis'] != 0)
+                <div class="info-row">
+                    <span class="info-label">🦉 Wisdom:</span>
+                    <span class="info-value text-success">+{{ $equipmentBonuses['wis'] }}</span>
+                </div>
+                @endif
+                @if($equipmentBonuses['cha'] != 0)
+                <div class="info-row">
+                    <span class="info-label">💬 Charisma:</span>
+                    <span class="info-value text-success">+{{ $equipmentBonuses['cha'] }}</span>
+                </div>
+                @endif
+                @if($equipmentBonuses['weapon_damage'] != 0)
+                <div class="info-row">
+                    <span class="info-label">⚔️ Weapon Damage:</span>
+                    <span class="info-value text-danger">+{{ $equipmentBonuses['weapon_damage'] }}</span>
+                </div>
+                @endif
+                @if($equipmentBonuses['ac'] != 0)
+                <div class="info-row">
+                    <span class="info-label">🛡️ Armor Class:</span>
+                    <span class="info-value text-primary">+{{ $equipmentBonuses['ac'] }}</span>
+                </div>
+                @endif
+                @if(array_sum($equipmentBonuses) == 0)
+                <div class="info-row">
+                    <span class="info-label text-muted">No equipment bonuses</span>
+                </div>
+                @endif
+            @else
+                <div class="info-row">
+                    <span class="info-label text-muted">No equipment bonuses</span>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -614,36 +700,148 @@
             <h2 class="h6 mb-2">🎒 Quick Inventory</h2>
         </div>
         
+        <!-- Inventory Tabs -->
+        <div class="inventory-tabs">
+            <button class="inventory-tab active" data-category="all" onclick="switchInventoryTab('all', this)">
+                🌟 All
+            </button>
+            <button class="inventory-tab" data-category="weapon" onclick="switchInventoryTab('weapon', this)">
+                ⚔️ Weapons
+            </button>
+            <button class="inventory-tab" data-category="armor" onclick="switchInventoryTab('armor', this)">
+                🛡️ Armor
+            </button>
+            <button class="inventory-tab" data-category="accessory" onclick="switchInventoryTab('accessory', this)">
+                💎 Accessories
+            </button>
+        </div>
+        
         <div class="equipment-list">
             @if(isset($inventoryItems) && count($inventoryItems) > 0)
-                @foreach($inventoryItems as $playerItem)
-                <div class="equipment-item" onclick="equipFromCharacterPage({{ $playerItem->id }})" style="cursor: pointer;">
-                    <img src="{{ $playerItem->item->getImagePath() }}" 
-                         alt="{{ $playerItem->item->name }}"
-                         class="equipment-item-icon">
-                    <div class="equipment-item-info">
-                        <div class="equipment-item-name {{ $playerItem->item->rarity }}">
-                            {{ $playerItem->item->name }}
-                        </div>
-                        <div class="equipment-item-slot">{{ ucfirst(str_replace('_', ' ', $playerItem->item->type)) }}</div>
-                        @if($playerItem->item->attack_bonus || $playerItem->item->defense_bonus)
-                        <div class="equipment-item-stats">
-                            @if($playerItem->item->attack_bonus)
-                                +{{ $playerItem->item->attack_bonus }} ATK
+                @php
+                    $weaponItems = $inventoryItems->filter(fn($item) => $item->item->type === 'weapon');
+                    $armorItems = $inventoryItems->filter(fn($item) => $item->item->type === 'armor');
+                    $accessoryItems = $inventoryItems->filter(fn($item) => $item->item->type === 'accessory');
+                @endphp
+                
+                <!-- All Items -->
+                <div class="inventory-category active" data-category="all">
+                    @foreach($inventoryItems as $playerItem)
+                    <div class="equipment-item" onclick="equipFromCharacterPage({{ $playerItem->id }})" style="cursor: pointer;">
+                        <img src="{{ $playerItem->item->getImagePath() }}" 
+                             alt="{{ $playerItem->item->name }}"
+                             class="equipment-item-icon">
+                        <div class="equipment-item-info">
+                            <div class="equipment-item-name {{ $playerItem->item->rarity }}">
+                                {{ $playerItem->item->name }}
+                            </div>
+                            <div class="equipment-item-slot">{{ ucfirst(str_replace('_', ' ', $playerItem->item->type)) }}</div>
+                            @if($playerItem->item->damage_bonus || $playerItem->item->ac_bonus)
+                            <div class="equipment-item-stats">
+                                @if($playerItem->item->damage_bonus)
+                                    ⚔️ +{{ $playerItem->item->damage_bonus }} DMG
+                                @endif
+                                @if($playerItem->item->ac_bonus)
+                                    🛡️ +{{ $playerItem->item->ac_bonus }} AC
+                                @endif
+                            </div>
                             @endif
-                            @if($playerItem->item->defense_bonus)
-                                +{{ $playerItem->item->defense_bonus }} DEF
+                            @if($playerItem->quantity > 1)
+                            <div class="equipment-item-quantity">
+                                <small class="text-muted">x{{ $playerItem->quantity }}</small>
+                            </div>
                             @endif
                         </div>
-                        @endif
-                        @if($playerItem->quantity > 1)
-                        <div class="equipment-item-quantity">
-                            <small class="text-muted">x{{ $playerItem->quantity }}</small>
-                        </div>
-                        @endif
                     </div>
+                    @endforeach
                 </div>
-                @endforeach
+
+                <!-- Weapons -->
+                <div class="inventory-category" data-category="weapon">
+                    @foreach($weaponItems as $playerItem)
+                    <div class="equipment-item" onclick="equipFromCharacterPage({{ $playerItem->id }})" style="cursor: pointer;">
+                        <img src="{{ $playerItem->item->getImagePath() }}" 
+                             alt="{{ $playerItem->item->name }}"
+                             class="equipment-item-icon">
+                        <div class="equipment-item-info">
+                            <div class="equipment-item-name {{ $playerItem->item->rarity }}">
+                                {{ $playerItem->item->name }}
+                            </div>
+                            <div class="equipment-item-slot">{{ ucfirst(str_replace('_', ' ', $playerItem->item->subtype ?? $playerItem->item->type)) }}</div>
+                            @if($playerItem->item->damage_bonus)
+                            <div class="equipment-item-stats">
+                                ⚔️ +{{ $playerItem->item->damage_bonus }} DMG
+                            </div>
+                            @endif
+                            @if($playerItem->quantity > 1)
+                            <div class="equipment-item-quantity">
+                                <small class="text-muted">x{{ $playerItem->quantity }}</small>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+
+                <!-- Armor -->
+                <div class="inventory-category" data-category="armor">
+                    @foreach($armorItems as $playerItem)
+                    <div class="equipment-item" onclick="equipFromCharacterPage({{ $playerItem->id }})" style="cursor: pointer;">
+                        <img src="{{ $playerItem->item->getImagePath() }}" 
+                             alt="{{ $playerItem->item->name }}"
+                             class="equipment-item-icon">
+                        <div class="equipment-item-info">
+                            <div class="equipment-item-name {{ $playerItem->item->rarity }}">
+                                {{ $playerItem->item->name }}
+                            </div>
+                            <div class="equipment-item-slot">{{ ucfirst(str_replace('_', ' ', $playerItem->item->subtype ?? $playerItem->item->type)) }}</div>
+                            @if($playerItem->item->ac_bonus)
+                            <div class="equipment-item-stats">
+                                🛡️ +{{ $playerItem->item->ac_bonus }} AC
+                            </div>
+                            @endif
+                            @if($playerItem->quantity > 1)
+                            <div class="equipment-item-quantity">
+                                <small class="text-muted">x{{ $playerItem->quantity }}</small>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+
+                <!-- Accessories -->
+                <div class="inventory-category" data-category="accessory">
+                    @foreach($accessoryItems as $playerItem)
+                    <div class="equipment-item" onclick="equipFromCharacterPage({{ $playerItem->id }})" style="cursor: pointer;">
+                        <img src="{{ $playerItem->item->getImagePath() }}" 
+                             alt="{{ $playerItem->item->name }}"
+                             class="equipment-item-icon">
+                        <div class="equipment-item-info">
+                            <div class="equipment-item-name {{ $playerItem->item->rarity }}">
+                                {{ $playerItem->item->name }}
+                            </div>
+                            <div class="equipment-item-slot">{{ ucfirst(str_replace('_', ' ', $playerItem->item->subtype ?? $playerItem->item->type)) }}</div>
+                            @if($playerItem->item->damage_bonus || $playerItem->item->ac_bonus)
+                            <div class="equipment-item-stats">
+                                @if($playerItem->item->damage_bonus)
+                                    ⚔️ +{{ $playerItem->item->damage_bonus }} DMG
+                                @endif
+                                @if($playerItem->item->ac_bonus)
+                                    🛡️ +{{ $playerItem->item->ac_bonus }} AC
+                                @endif
+                            </div>
+                            @endif
+                            @if($playerItem->quantity > 1)
+                            <div class="equipment-item-quantity">
+                                <small class="text-muted">x{{ $playerItem->quantity }}</small>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                
             @else
                 <div class="text-center py-3">
                     <div class="mb-2" style="font-size: 2rem; opacity: 0.5;">📦</div>
@@ -798,6 +996,27 @@ function equipFromCharacterPage(itemId) {
     form.submit();
 }
 
+function switchInventoryTab(category, tabElement) {
+    // Remove active class from all tabs
+    document.querySelectorAll('.inventory-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Add active class to clicked tab
+    tabElement.classList.add('active');
+    
+    // Hide all inventory categories
+    document.querySelectorAll('.inventory-category').forEach(cat => {
+        cat.classList.remove('active');
+    });
+    
+    // Show selected category
+    const targetCategory = document.querySelector(`[data-category="${category}"].inventory-category`);
+    if (targetCategory) {
+        targetCategory.classList.add('active');
+    }
+}
+
 // Tooltip functionality for equipment slots
 document.addEventListener('DOMContentLoaded', function() {
     const equipmentSlots = document.querySelectorAll('.equipment-slot');
@@ -807,9 +1026,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (slot.classList.contains('equipped-slot')) {
             slot.addEventListener('mouseenter', function(e) {
                 const itemImage = this.querySelector('.slot-item-image');
-                const itemName = this.getAttribute('title');
-                if (itemImage && itemName && itemName !== 'Helmet' && itemName !== 'Main Hand') {
-                    showTooltip(e, itemName);
+                if (itemImage) {
+                    const itemData = {
+                        name: this.dataset.itemName,
+                        rarity: this.dataset.itemRarity,
+                        type: this.dataset.itemType,
+                        attack: parseInt(this.dataset.itemAttack) || 0,
+                        defense: parseInt(this.dataset.itemDefense) || 0,
+                        description: this.dataset.itemDescription
+                    };
+                    showTooltip(e, itemData);
                 }
             });
 
@@ -819,32 +1045,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function showTooltip(event, content) {
+    function showTooltip(event, itemData) {
         hideTooltip(); // Remove any existing tooltip
+        
+        const rarityColors = {
+            'common': '#6c757d',
+            'uncommon': '#28a745', 
+            'rare': '#007bff',
+            'epic': '#6f42c1',
+            'legendary': '#fd7e14'
+        };
+        
+        let statsHTML = '';
+        if (itemData.attack > 0) {
+            statsHTML += `<div class="tooltip-stat">⚔️ Damage: +${itemData.attack}</div>`;
+        }
+        if (itemData.defense > 0) {
+            statsHTML += `<div class="tooltip-stat">🛡️ AC: +${itemData.defense}</div>`;
+        }
+        
+        const content = `
+            <div class="tooltip-header">
+                <div class="tooltip-name" style="color: ${rarityColors[itemData.rarity] || '#fff'}">
+                    ${itemData.name}
+                </div>
+                <div class="tooltip-type">${itemData.type}</div>
+            </div>
+            ${statsHTML ? `<div class="tooltip-stats">${statsHTML}</div>` : ''}
+            ${itemData.description ? `<div class="tooltip-description">${itemData.description}</div>` : ''}
+            <div class="tooltip-action">Click to unequip</div>
+        `;
         
         tooltip = document.createElement('div');
         tooltip.className = 'equipment-tooltip';
         tooltip.innerHTML = content;
         tooltip.style.cssText = `
             position: absolute;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 8px;
             font-size: 0.85rem;
             border: 1px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
             z-index: 1000;
-            max-width: 250px;
+            max-width: 280px;
             word-wrap: break-word;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
         `;
+        
+        // Add custom styles for tooltip content
+        const style = document.createElement('style');
+        style.textContent = `
+            .tooltip-header { margin-bottom: 8px; }
+            .tooltip-name { font-weight: bold; font-size: 1rem; margin-bottom: 2px; }
+            .tooltip-type { font-size: 0.8rem; opacity: 0.8; text-transform: capitalize; }
+            .tooltip-stats { margin: 8px 0; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.2); border-bottom: 1px solid rgba(255,255,255,0.2); }
+            .tooltip-stat { margin: 2px 0; font-size: 0.85rem; }
+            .tooltip-description { margin: 8px 0; font-size: 0.8rem; opacity: 0.9; font-style: italic; }
+            .tooltip-action { margin-top: 8px; font-size: 0.75rem; opacity: 0.7; text-align: center; }
+        `;
+        document.head.appendChild(style);
         
         document.body.appendChild(tooltip);
         
         // Position tooltip near cursor
         const rect = tooltip.getBoundingClientRect();
-        tooltip.style.left = Math.min(event.pageX + 10, window.innerWidth - rect.width - 10) + 'px';
-        tooltip.style.top = Math.max(event.pageY - rect.height - 10, 10) + 'px';
+        tooltip.style.left = Math.min(event.pageX + 15, window.innerWidth - rect.width - 15) + 'px';
+        tooltip.style.top = Math.max(event.pageY - rect.height - 15, 15) + 'px';
     }
 
     function hideTooltip() {

@@ -698,10 +698,8 @@ class GameController extends Controller
         $playerItem = $player->playerItems()->with('item')->find($id);
 
         if (!$inventoryItem && !$playerItem) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Item not found in inventory.'
-            ], 404);
+            return redirect()->route('game.character')
+                ->with('error', 'Item not found in inventory.');
         }
 
         $item = $inventoryItem ? $inventoryItem->item : $playerItem->item;
@@ -713,14 +711,12 @@ class GameController extends Controller
 
         // Handle null slots for items that need special slot selection
         if (!$slot) {
-            $slot = $this->determineEquipmentSlot($item);
+            $slot = $this->determineEquipmentSlot($item, $player);
         }
 
         if (!$slot) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unable to determine equipment slot for this item.'
-            ]);
+            return redirect()->route('game.character')
+                ->with('error', 'Unable to determine equipment slot for this item.');
         }
 
         $success = false;
@@ -734,15 +730,11 @@ class GameController extends Controller
         }
 
         if ($success) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Item equipped successfully!'
-            ]);
+            return redirect()->route('game.character')
+                ->with('success', 'Item equipped successfully!');
         } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unable to equip item. Check level requirements and item type.'
-            ]);
+            return redirect()->route('game.character')
+                ->with('error', 'Unable to equip item. Check level requirements and item type.');
         }
     }
 
@@ -790,16 +782,62 @@ class GameController extends Controller
         }
     }
 
-    private function determineEquipmentSlot(Item $item): ?string
+    private function determineEquipmentSlot(\App\Models\Item $item, ?Player $player = null): ?string
     {
-        // Handle one-handed weapons - default to weapon_1
-        if (in_array($item->subtype, [Item::SUBTYPE_SWORD, Item::SUBTYPE_AXE, Item::SUBTYPE_MACE, Item::SUBTYPE_DAGGER])) {
-            return Equipment::SLOT_WEAPON_1;
+        // Handle one-handed weapons - check both slots and use first empty
+        if (in_array($item->subtype, [\App\Models\Item::SUBTYPE_SWORD, \App\Models\Item::SUBTYPE_AXE, \App\Models\Item::SUBTYPE_MACE, \App\Models\Item::SUBTYPE_DAGGER])) {
+            if ($player) {
+                // Check if weapon_1 is empty
+                $weapon1Equipped = $player->playerItems()
+                    ->where('is_equipped', true)
+                    ->where('equipment_slot', 'weapon_1')
+                    ->exists();
+                
+                if (!$weapon1Equipped) {
+                    return 'weapon_1';
+                }
+                
+                // Check if weapon_2 is empty
+                $weapon2Equipped = $player->playerItems()
+                    ->where('is_equipped', true)
+                    ->where('equipment_slot', 'weapon_2')
+                    ->exists();
+                
+                if (!$weapon2Equipped) {
+                    return 'weapon_2';
+                }
+            }
+            
+            // Default to weapon_1 if no player context or both slots occupied
+            return 'weapon_1';
         }
 
-        // Handle rings - default to ring_1
-        if ($item->subtype === Item::SUBTYPE_RING) {
-            return Equipment::SLOT_RING_1;
+        // Handle rings - check both ring slots and use first empty
+        if ($item->subtype === \App\Models\Item::SUBTYPE_RING) {
+            if ($player) {
+                // Check if ring_1 is empty
+                $ring1Equipped = $player->playerItems()
+                    ->where('is_equipped', true)
+                    ->where('equipment_slot', 'ring_1')
+                    ->exists();
+                
+                if (!$ring1Equipped) {
+                    return 'ring_1';
+                }
+                
+                // Check if ring_2 is empty
+                $ring2Equipped = $player->playerItems()
+                    ->where('is_equipped', true)
+                    ->where('equipment_slot', 'ring_2')
+                    ->exists();
+                
+                if (!$ring2Equipped) {
+                    return 'ring_2';
+                }
+            }
+            
+            // Default to ring_1 if no player context or both slots occupied
+            return 'ring_1';
         }
 
         return null;
