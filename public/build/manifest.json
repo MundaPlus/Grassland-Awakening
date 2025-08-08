@@ -1,6 +1,6 @@
 {
-  "_popper-Bt1yUB8z.js": {
-    "file": "assets/popper-Bt1yUB8z.js",
+  "_popper-KXE4JgM1.js": {
+    "file": "assets/popper-KXE4JgM1.js",
     "name": "popper"
   },
   "node_modules/@fortawesome/fontawesome-free/webfonts/fa-brands-400.ttf": {
@@ -36,27 +36,106 @@
     "src": "node_modules/@fortawesome/fontawesome-free/webfonts/fa-v4compatibility.woff2"
   },
   "resources/css/app-frontend.css": {
-    "file": "assets/app-frontend-w5HQuSGs.css",
+    "file": "assets/app-frontend-D1yh8l64.css",
     "src": "resources/css/app-frontend.css",
     "isEntry": true
   },
+  "resources/css/game/adventure-map.css": {
+    "file": "assets/adventure-map-DvsWxGT9.css",
+    "src": "resources/css/game/adventure-map.css",
+    "isEntry": true
+  },
+  "resources/css/game/adventures.css": {
+    "file": "assets/adventures-BnMIphsd.css",
+    "src": "resources/css/game/adventures.css",
+    "isEntry": true
+  },
+  "resources/css/game/character.css": {
+    "file": "assets/character-IETpag-9.css",
+    "src": "resources/css/game/character.css",
+    "isEntry": true
+  },
+  "resources/css/game/crafting.css": {
+    "file": "assets/crafting-l0sNRNKZ.js",
+    "name": "crafting",
+    "src": "resources/css/game/crafting.css",
+    "isEntry": true
+  },
+  "resources/css/game/dashboard.css": {
+    "file": "assets/dashboard-DOu0X_9l.css",
+    "src": "resources/css/game/dashboard.css",
+    "isEntry": true
+  },
+  "resources/css/game/inventory.css": {
+    "file": "assets/inventory-BkOY4wn6.css",
+    "src": "resources/css/game/inventory.css",
+    "isEntry": true
+  },
+  "resources/css/game/skills.css": {
+    "file": "assets/skills-l0sNRNKZ.js",
+    "name": "skills",
+    "src": "resources/css/game/skills.css",
+    "isEntry": true
+  },
   "resources/js/app-backend.js": {
-    "file": "assets/app-backend-DEvUHY1U.js",
+    "file": "assets/app-backend-C44AFzUW.js",
     "name": "app-backend",
     "src": "resources/js/app-backend.js",
     "isEntry": true,
     "imports": [
-      "_popper-Bt1yUB8z.js"
+      "_popper-KXE4JgM1.js"
     ]
   },
   "resources/js/app-frontend.js": {
-    "file": "assets/app-frontend-B39E8JXZ.js",
+    "file": "assets/app-frontend-BXfRPpw2.js",
     "name": "app-frontend",
     "src": "resources/js/app-frontend.js",
     "isEntry": true,
     "imports": [
-      "_popper-Bt1yUB8z.js"
+      "_popper-KXE4JgM1.js"
     ]
+  },
+  "resources/js/game/adventure-map.js": {
+    "file": "assets/adventure-map-l0sNRNKZ.js",
+    "name": "adventure-map",
+    "src": "resources/js/game/adventure-map.js",
+    "isEntry": true
+  },
+  "resources/js/game/adventures.js": {
+    "file": "assets/adventures-BbmlvYdu.js",
+    "name": "adventures",
+    "src": "resources/js/game/adventures.js",
+    "isEntry": true
+  },
+  "resources/js/game/character.js": {
+    "file": "assets/character-BLbv_bOj.js",
+    "name": "character",
+    "src": "resources/js/game/character.js",
+    "isEntry": true
+  },
+  "resources/js/game/crafting.js": {
+    "file": "assets/crafting-DP2rzg_V.js",
+    "name": "crafting",
+    "src": "resources/js/game/crafting.js",
+    "isEntry": true
+  },
+  "resources/js/game/inventory.js": {
+    "file": "assets/inventory-DGpHEhVb.js",
+    "name": "inventory",
+    "src": "resources/js/game/inventory.js",
+    "isEntry": true
+  },
+  "resources/js/game/skills.js": {
+    "file": "assets/skills-DP2rzg_V.js",
+    "name": "skills",
+    "src": "resources/js/game/skills.js",
+    "isEntry": true
+  },
+  "resources/js/game/village.js": {
+    "file": "assets/village-l0sNRNKZ.js",
+    "name": "village",
+    "src": "resources/js/game/village.js",
+    "isEntry": true
   },
   "resources/sass/app-backend.scss": {
     "file": "assets/app-backend-DPPVP33d.css",
