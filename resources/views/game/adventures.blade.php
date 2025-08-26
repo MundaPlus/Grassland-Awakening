@@ -282,12 +282,12 @@ document.addEventListener('DOMContentLoaded', function() {
             ];
         })) !!}
     };
-    
+
     // Override the generic functions with server data
     window.continueActiveAdventure = function() {
         continueActiveAdventure(adventuresData.activeAdventures);
     };
-    
+
     window.abandonSelectedAdventure = function() {
         abandonSelectedAdventure(adventuresData.activeAdventures);
     };

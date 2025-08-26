@@ -85,24 +85,17 @@ function selectAdventure(adventureId) {
 
     // Remove previous selections
     document.querySelectorAll('.adventure-item').forEach(item => {
-        item.classList.remove('selected');
         item.style.borderColor = 'rgba(255, 255, 255, 0.2)';
     });
 
-    // Find and highlight the clicked adventure item
-    const clickedItem = document.querySelector(`[onclick*="${adventureId}"]`);
-    if (clickedItem) {
-        clickedItem.classList.add('selected');
-        clickedItem.style.borderColor = 'rgba(255, 255, 255, 0.8)';
-    }
+    // Highlight selected adventure
+    event.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
 
-    // Enable start button if it exists
+    // Enable start button
     const startBtn = document.getElementById('start-adventure-btn');
-    if (startBtn) {
-        startBtn.disabled = false;
-        startBtn.classList.remove('btn-secondary');
-        startBtn.classList.add('btn-success');
-    }
+    startBtn.disabled = false;
+    startBtn.classList.remove('btn-secondary');
+    startBtn.classList.add('btn-success');
 
     console.log('Selected adventure:', adventureId);
 }
@@ -176,13 +169,3 @@ function abandonSelectedAdventure(activeAdventures = []) {
         alert('No active adventures to abandon.');
     }
 }
-
-// Export functions to global scope so they can be called from onclick handlers
-window.selectAdventure = selectAdventure;
-window.startSelectedAdventure = startSelectedAdventure;
-window.continueAdventure = continueAdventure;
-window.continueActiveAdventure = continueActiveAdventure;
-window.abandonSelectedAdventure = abandonSelectedAdventure;
-
-// Debug: Confirm functions are loaded
-console.log('Adventures.js loaded - selectAdventure function available:', typeof window.selectAdventure);
